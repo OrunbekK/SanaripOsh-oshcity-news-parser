@@ -217,24 +217,44 @@ func (dp *DateParser) parseKyrgyz(dateStr string) (time.Time, error) {
 			year = y
 		}
 
+		// Опционально: базовая проверка диапазонов
+		if day < 1 || day > 31 || month < 1 || month > 12 {
+			return time.Time{}, fmt.Errorf("invalid date: day=%d, month=%d", day, month)
+		}
+
 		t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 		return t, nil
 	}
 
-	// Формат: "18.10.2024"
+	// Формат: "18.10.2024" или "18.10"
 	re = regexp.MustCompile(`(\d{1,2})\.(\d{1,2})\.(\d{4})?`)
 	matches = re.FindStringSubmatch(dateStr)
 	if len(matches) > 0 {
-		day := parseIntSafe(matches[1])
-		month := parseIntSafe(matches[2])
-		yearStr := matches[3]
-
-		year := time.Now().Year()
-		if yearStr != "" {
-			year = parseIntSafe(yearStr)
+		day, err := parseIntSafe(matches[1])
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid day in numeric date: %q: %w", matches[1], err)
 		}
 
-		t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+		monthNum, err := parseIntSafe(matches[2])
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid month in numeric date: %q: %w", matches[2], err)
+		}
+
+		year := time.Now().Year()
+		if yearStr := matches[3]; yearStr != "" {
+			y, err := parseIntSafe(yearStr)
+			if err != nil {
+				return time.Time{}, fmt.Errorf("invalid year in numeric date: %q: %w", yearStr, err)
+			}
+			year = y
+		}
+
+		// Проверка корректности месяца и дня
+		if day < 1 || day > 31 || monthNum < 1 || monthNum > 12 {
+			return time.Time{}, fmt.Errorf("invalid numeric date: day=%d, month=%d", day, monthNum)
+		}
+
+		t := time.Date(year, time.Month(monthNum), day, 0, 0, 0, 0, time.UTC)
 		return t, nil
 	}
 
