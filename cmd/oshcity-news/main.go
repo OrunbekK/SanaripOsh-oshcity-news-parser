@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("Fetch failed: %v", err)
 	}
 
-	fmt.Printf("✓ Fetched %d bytes\n", len(resp.Body))
+	fmt.Printf("Fetched %d bytes\n", len(resp.Body))
 
 	// Парсим листинг
 	cards, err := scr.ParseListing(string(resp.Body))
@@ -51,7 +51,7 @@ func main() {
 		log.Fatalf("Parse failed: %v", err)
 	}
 
-	fmt.Printf("✓ Found %d cards\n\n", len(cards))
+	fmt.Printf("Found %d cards\n\n", len(cards))
 
 	// Выводим первые 3 карточки
 	for i, card := range cards {
