@@ -1,0 +1,51 @@
+base_urls:
+  ru: "https://oshcity.gov.kg/ru/novosti/"
+  ky: "https://oshcity.gov.kg/ky/zha%d2%a3ylyktar/"
+
+http:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  connect_timeout_ms: 10000
+  total_timeout_ms: 30000
+  max_retries: 3
+  backoff_min_ms: 250
+  backoff_max_ms: 2000
+  jitter_pct: 20
+  accept_language_ru: "ru-RU,ru;q=0.9,en;q=0.8"
+  accept_language_ky: "ky-KG,ky;q=0.9,en;q=0.8"
+
+rate_limit:
+  max_concurrent_per_host: 6
+  rpm: 120
+
+pagination:
+  strategy: "links"  # links или pageN
+  max_pages_ru: 60
+  max_pages_ky: 60
+  stop_on_known_chain_pages: 2
+
+selectors_file:
+  ru: "selectors.ru.yaml"
+  ky: "selectors.ky.yaml"
+
+normalize:
+  strip_blocks: ["Похожие", "Видео"]
+  trim_nbsp: true
+  collapse_spaces: true
+  max_preview_chars: 350
+
+storage:
+  driver: "mssql"  # mssql | postgres
+  dsn: "Server=localhost;Database=OshCitySanarip;User Id=sa;Password=GPRS;"
+  command_timeout_ms: 15000
+  batch_size: 20
+  tx_per_page: true
+
+scheduler:
+  mode: "interval"  # interval | cron | oneshot
+  interval_s: 900   # 15 минут
+  cron_expr: ""
+
+observability:
+  log_path: "logs/app.log"
+  log_level: "info"
+  metrics_path: "logs/metrics.log"
