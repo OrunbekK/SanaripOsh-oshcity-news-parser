@@ -1,0 +1,22 @@
+list_container: "div.news-list"
+card_selectors: "div.news-item"
+title_selectors:
+  - "h3.news-title"
+  - "a.news-link"
+  - ".title"
+  - "h2"
+url_selectors:
+  - "a.news-link@href"
+  - "h3.news-title > a@href"
+  - ".news-item > a@href"
+  - "a@href"
+date_selectors:
+  - "span.news-date"
+  - ".date"
+  - "time@datetime"
+  - "span[class*='date']"
+next_page_link:
+  - "a.next-page"
+  - "a[rel='next']"
+  - "a:contains('Кийинки')"
+  - ".pagination > a:last-child"
