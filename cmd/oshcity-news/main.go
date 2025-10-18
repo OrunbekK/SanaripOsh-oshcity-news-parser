@@ -1,0 +1,1 @@
+package oshcity_news
