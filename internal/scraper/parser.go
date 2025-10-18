@@ -119,18 +119,32 @@ func (dp *DateParser) parseRussian(dateStr string) (time.Time, error) {
 	re := regexp.MustCompile(`(\d{1,2})\s+([а-яё]+)\s+(\d{4})?`)
 	matches := re.FindStringSubmatch(dateStr)
 	if len(matches) > 0 {
-		day := parseIntSafe(matches[1])
-		monthName := matches[2]
-		yearStr := matches[3]
+		day, err := parseIntSafe(matches[1])
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid day: %q: %w", matches[1], err)
+		}
 
+		monthName := matches[2]
 		month, ok := ruMonths[monthName]
 		if !ok {
 			return time.Time{}, fmt.Errorf("unknown month: %s", monthName)
 		}
 
 		year := time.Now().Year()
-		if yearStr != "" {
-			year = parseIntSafe(yearStr)
+		if yearStr := matches[3]; yearStr != "" {
+			y, err := parseIntSafe(yearStr)
+			if err != nil {
+				return time.Time{}, fmt.Errorf("invalid year: %q: %w", yearStr, err)
+			}
+			year = y
+		}
+
+		// Опционально: проверка валидности даты
+		if day < 1 || day > 31 {
+			return time.Time{}, fmt.Errorf("invalid day: %d", day)
+		}
+		if month < 1 || month > 12 {
+			return time.Time{}, fmt.Errorf("invalid month: %d", month)
 		}
 
 		t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
@@ -141,16 +155,33 @@ func (dp *DateParser) parseRussian(dateStr string) (time.Time, error) {
 	re = regexp.MustCompile(`(\d{1,2})\.(\d{1,2})\.(\d{4})?`)
 	matches = re.FindStringSubmatch(dateStr)
 	if len(matches) > 0 {
-		day := parseIntSafe(matches[1])
-		month := parseIntSafe(matches[2])
-		yearStr := matches[3]
-
-		year := time.Now().Year()
-		if yearStr != "" {
-			year = parseIntSafe(yearStr)
+		day, err := parseIntSafe(matches[1])
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid day: %q: %w", matches[1], err)
 		}
 
-		t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+		monthNum, err := parseIntSafe(matches[2])
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid month: %q: %w", matches[2], err)
+		}
+
+		year := time.Now().Year()
+		if yearStr := matches[3]; yearStr != "" {
+			y, err := parseIntSafe(yearStr)
+			if err != nil {
+				return time.Time{}, fmt.Errorf("invalid year: %q: %w", yearStr, err)
+			}
+			year = y
+		}
+
+		if day < 1 || day > 31 {
+			return time.Time{}, fmt.Errorf("invalid day: %d", day)
+		}
+		if monthNum < 1 || monthNum > 12 {
+			return time.Time{}, fmt.Errorf("invalid month: %d", monthNum)
+		}
+
+		t := time.Date(year, time.Month(monthNum), day, 0, 0, 0, 0, time.UTC)
 		return t, nil
 	}
 
@@ -164,7 +195,11 @@ func (dp *DateParser) parseKyrgyz(dateStr string) (time.Time, error) {
 	re := regexp.MustCompile(`(\d{1,2})\s+([а-яё]+)\s+(\d{4})?`)
 	matches := re.FindStringSubmatch(dateStr)
 	if len(matches) > 0 {
-		day := parseIntSafe(matches[1])
+		day, err := parseIntSafe(matches[1])
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid day: %q: %w", matches[1], err)
+		}
+
 		monthName := matches[2]
 		yearStr := matches[3]
 
@@ -175,7 +210,11 @@ func (dp *DateParser) parseKyrgyz(dateStr string) (time.Time, error) {
 
 		year := time.Now().Year()
 		if yearStr != "" {
-			year = parseIntSafe(yearStr)
+			y, err := parseIntSafe(yearStr)
+			if err != nil {
+				return time.Time{}, fmt.Errorf("invalid year: %q: %w", yearStr, err)
+			}
+			year = y
 		}
 
 		t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
@@ -202,8 +241,11 @@ func (dp *DateParser) parseKyrgyz(dateStr string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unable to parse date (KY): %s", dateStr)
 }
 
-func parseIntSafe(s string) int {
+func parseIntSafe(s string) (int, error) {
 	var result int
-	fmt.Sscanf(s, "%d", &result)
-	return result
+	_, err := fmt.Sscanf(s, "%d", &result)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse %q as int: %w", s, err)
+	}
+	return result, nil
 }

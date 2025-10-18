@@ -27,6 +27,11 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 	var cards []*Card
 	sequenceNum := 0
 
+	// DEBUG: выводим что нашли по селектору
+	fmt.Printf("DEBUG: Ищем по селектору: %s\n", s.selectors.CardSelectors)
+	count := doc.Find(s.selectors.CardSelectors).Length()
+	fmt.Printf("DEBUG: Найдено элементов: %d\n", count)
+
 	// Найти контейнер со списком
 	doc.Find(s.selectors.CardSelectors).Each(func(i int, sel *goquery.Selection) {
 		card := &Card{
