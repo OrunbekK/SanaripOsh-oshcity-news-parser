@@ -36,6 +36,8 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 			SequenceNum: sequenceNum,
 		}
 
+		s.logger.Debug("Processing card #%d\n", sequenceNum)
+
 		// Title
 		card.Title = trySelectors(sel, s.selectors.TitleSelectors)
 		if card.Title == "" {
@@ -71,6 +73,8 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		cards = append(cards, card)
 		sequenceNum++
 	})
+
+	s.logger.Debug("ParseListing: total cards parsed = %d\n", len(cards))
 
 	return cards, nil
 }
