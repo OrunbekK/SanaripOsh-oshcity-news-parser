@@ -22,11 +22,12 @@ func NewLogger(logPath, logLevel string, maxAgeDays, maxSizeMB, maxBackups int) 
 		}
 	}
 
-	var output io.Writer = os.Stdout
+	var writers []io.Writer
+	writers = append(writers, os.Stdout) // Всегда выводим в консоль
 
-	// Если указан путь логов — добавляем ротацию
+	// Если указан путь логов — добавляем файл с ротацией
 	if logPath != "" {
-		writer := &lumberjack.Logger{
+		fileWriter := &lumberjack.Logger{
 			Filename:   logPath,
 			MaxSize:    maxSizeMB,
 			MaxAge:     maxAgeDays,
@@ -34,9 +35,10 @@ func NewLogger(logPath, logLevel string, maxAgeDays, maxSizeMB, maxBackups int) 
 			Compress:   true,
 			LocalTime:  true,
 		}
-		// Выводим одновременно в файл и консоль
-		output = io.MultiWriter(os.Stdout, writer)
+		writers = append(writers, fileWriter)
 	}
+
+	output := io.MultiWriter(writers...)
 
 	handler := slog.NewTextHandler(output, &slog.HandlerOptions{
 		Level: parseLevel(logLevel),
