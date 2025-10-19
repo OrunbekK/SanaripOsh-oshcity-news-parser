@@ -44,17 +44,13 @@ type PaginationStats struct {
 }
 
 // Run запускает пайплайн пагинации для языка
-func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, error) {
-	baseURL := o.getBaseURL(lang)
-	if baseURL == "" {
-		return nil, fmt.Errorf("no base URL for language: %s", lang)
-	}
-
-	maxPages := o.getMaxPages(lang)
+func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) (*PaginationStats, error) {
+	baseURL := langCfg.BaseURL
+	maxPages := langCfg.MaxPages
 	latestKnownDate := time.Now().UTC().AddDate(0, 0, -o.cfg.Pagination.DaysBackThreshold).Truncate(24 * time.Hour)
 
 	o.logger.Info("Starting pagination",
-		"language", lang,
+		"language", langCfg.Name,
 		"base_url", baseURL,
 		"max_pages", maxPages,
 		"latest_known_date", latestKnownDate.Format("2006-01-02"),
@@ -67,16 +63,16 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 
 	for pageNum := 1; pageNum <= maxPages; pageNum++ {
 		o.logger.Info("Processing page",
-			"language", lang,
+			"language", langCfg.Name,
 			"page", pageNum,
 			"url", currentURL,
 		)
 
 		// Фетчим страницу
-		resp, err := o.fetcher.Fetch(ctx, currentURL, lang)
+		resp, err := o.fetcher.Fetch(ctx, currentURL, langCfg.Name)
 		if err != nil {
 			o.logger.Error("Fetch failed",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 				"url", currentURL,
 				"error", err.Error(),
@@ -89,7 +85,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 		cards, err := o.scraper.ParseListing(string(resp.Body))
 		if err != nil {
 			o.logger.Error("Parse listing failed",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 				"error", err.Error(),
 			)
@@ -99,7 +95,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 
 		if len(cards) == 0 {
 			o.logger.Info("No cards found on page",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 			)
 			stats.StoppedReason = fmt.Sprintf("no cards on page %d", pageNum)
@@ -115,7 +111,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 			cardDate, err := o.dateParser.Parse(card.DateRaw)
 			if err != nil {
 				o.logger.Warn("Failed to parse card date",
-					"language", lang,
+					"language", langCfg.Name,
 					"page", pageNum,
 					"card_title", card.Title,
 					"date_raw", card.DateRaw,
@@ -127,7 +123,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 
 			// Debug: выводим информацию по каждой карточке
 			o.logger.Debug("Card info",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 				"card_num", i+1,
 				"title", card.Title,
@@ -144,7 +140,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 		stats.OldCards += oldCardsOnPage
 
 		o.logger.Info("Page analysis",
-			"language", lang,
+			"language", langCfg.Name,
 			"page", pageNum,
 			"total_cards", len(cards),
 			"old_cards", oldCardsOnPage,
@@ -155,14 +151,14 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 		if oldCardsOnPage == len(cards) {
 			consecutiveOldPages++
 			o.logger.Info("All cards on page are old",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 				"consecutive_old_pages", consecutiveOldPages,
 			)
 
 			if consecutiveOldPages >= o.cfg.Pagination.StopOnKnownChainPages {
 				o.logger.Info("Stopping: reached consecutive old pages threshold",
-					"language", lang,
+					"language", langCfg.Name,
 					"threshold", o.cfg.Pagination.StopOnKnownChainPages,
 					"page", pageNum,
 				)
@@ -173,7 +169,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 			// Сбрасываем счётчик, если нашли новые карточки
 			consecutiveOldPages = 0
 			o.logger.Info("Found new cards, reset consecutive counter",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 			)
 		}
@@ -182,7 +178,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 		nextLink, err := o.scraper.FindNextPageLink(string(resp.Body))
 		if err != nil {
 			o.logger.Error("Failed to extract next link",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 				"error", err.Error(),
 			)
@@ -192,7 +188,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 
 		if nextLink == "" {
 			o.logger.Info("No next link found",
-				"language", lang,
+				"language", langCfg.Name,
 				"page", pageNum,
 			)
 			stats.StoppedReason = fmt.Sprintf("no next link at page %d", pageNum)
@@ -201,14 +197,14 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 
 		currentURL = nextLink
 		o.logger.Debug("Next URL extracted",
-			"language", lang,
+			"language", langCfg.Name,
 			"page", pageNum,
 			"next_url", nextLink,
 		)
 	}
 
 	o.logger.Info("Pagination completed",
-		"language", lang,
+		"language", langCfg.Name,
 		"total_pages", stats.TotalPages,
 		"total_cards", stats.TotalCards,
 		"old_cards", stats.OldCards,
@@ -216,18 +212,4 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 	)
 
 	return stats, nil
-}
-
-func (o *Orchestrator) getBaseURL(lang string) string {
-	if lang == "ky" {
-		return o.cfg.BaseURLs.KY
-	}
-	return o.cfg.BaseURLs.RU
-}
-
-func (o *Orchestrator) getMaxPages(lang string) int {
-	if lang == "ky" {
-		return o.cfg.Pagination.MaxPagesKY
-	}
-	return o.cfg.Pagination.MaxPagesRU
 }

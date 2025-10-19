@@ -1,6 +1,14 @@
-base_urls:
-  ru: "https://oshcity.gov.kg/ru/novosti/"
-  ky: "https://oshcity.gov.kg/ky/zha%d2%a3ylyktar/"
+languages:
+  - name: "ru"
+    base_url: "https://oshcity.gov.kg/ru/novosti/"
+    selectors_file: "selectors.ru.yaml"
+    accept_language: "ru-RU,ru;q=0.9"
+    max_pages: 60
+  - name: "kg"
+    base_url: "https://oshcity.gov.kg/ky/zha%d2%a3ylyktar/"
+    selectors_file: "selectors.kg.yaml"
+    accept_language: "ky-KG,ky;q=0.9"
+    max_pages: 60
 
 rod:
   enabled: true
@@ -17,8 +25,6 @@ http:
   max_idle_connections: 100
   max_idle_connections_per_host: 10
   idle_connection_timeout_s: 90
-  accept_language_ru: "ru-RU,ru;q=0.9,en;q=0.8"
-  accept_language_ky: "ky-KG,ky;q=0.9,en;q=0.8"
 
 robots_cache_ttl_hours: 12
 
