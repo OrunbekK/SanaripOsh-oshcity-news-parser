@@ -26,7 +26,22 @@ func NewScraper(selectors *Selectors, debugDir string, logger *observability.Log
 }
 
 // ParseListing парсит листинг и возвращает массив карточек
-func (s *Scraper) ParseListing(html string) ([]*Card, error) {
+func (s *Scraper) ParseListing(html string, lang string, pageNum int, saveDebug bool) ([]*Card, error) {
+	if saveDebug {
+		debugDir := "logs/debug"
+		if err := os.MkdirAll(debugDir, 0755); err != nil {
+			s.logger.Error("Failed to create debug directory", "dir", debugDir, "error", err.Error())
+			return nil, fmt.Errorf("failed to create debug directory: %w", err)
+		}
+
+		pageFile := fmt.Sprintf("%s/page_%s_%d.html", debugDir, lang, pageNum)
+		if err := os.WriteFile(pageFile, []byte(html), 0644); err != nil {
+			s.logger.Error("Failed to save page HTML", "file", pageFile, "error", err.Error())
+		} else {
+			s.logger.Debug("Page HTML saved", "file", pageFile)
+		}
+	}
+
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HTML: %w", err)
@@ -37,11 +52,11 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 
 	doc.Find(s.selectors.CardSelectors).Each(func(i int, sel *goquery.Selection) {
 		sequenceNum++
-		s.logger.Debug("Processing card", "card_num", sequenceNum)
-
 		card := &Card{
 			SequenceNum: sequenceNum,
 		}
+
+		s.logger.Debug("Processing card", "card_num", sequenceNum)
 
 		// Title
 		card.Title = trySelectors(sel, s.selectors.TitleSelectors)
@@ -76,6 +91,9 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 				return
 			}
 		}
+
+		card.Title = strings.TrimSpace(card.Title)
+		card.Title = removeLeadingEmoji(card.Title)
 
 		// URL
 		urlRaw := trySelectors(sel, s.selectors.URLSelectors)
@@ -236,6 +254,7 @@ func (s *Scraper) saveDebugCard(sequenceNum int, cardTitle string, html string, 
 		s.logger.Error("Failed to create debug directory", "dir", debugDir, "error", err.Error())
 		return
 	}
+
 	// Генерируем уникальное имя файла
 	filename := ""
 	for i := 0; i < 100; i++ {
@@ -263,4 +282,32 @@ func (s *Scraper) saveDebugCard(sequenceNum int, cardTitle string, html string, 
 		"reason", reason,
 		"file", filename,
 	)
+}
+
+func removeLeadingEmoji(s string) string {
+	runes := []rune(s)
+	i := 0
+
+	for i < len(runes) {
+		r := runes[i]
+
+		// Проверяем разные категории символов для удаления
+		switch {
+		case r == ' ': // пробелы
+			i++
+		case r >= 0x1F300 && r <= 0x1F9FF: // эмодзи
+			i++
+		case r > 127 && !isCyrillic(r): // не-ASCII символы, кроме кириллицы
+			i++
+		default:
+			return string(runes[i:])
+		}
+	}
+
+	return ""
+}
+
+// isCyrillic проверяет, является ли символ кириллическим
+func isCyrillic(r rune) bool {
+	return (r >= 'а' && r <= 'я') || (r >= 'А' && r <= 'Я')
 }

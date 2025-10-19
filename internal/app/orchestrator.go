@@ -14,13 +14,14 @@ import (
 )
 
 type Orchestrator struct {
-	cfg         *config.Config
-	logger      *observability.Logger
-	fetcher     *fetcher.Fetcher
-	scraper     *scraper.Scraper
-	dateParser  *scraper.DateParser
-	repo        storage.Repository
-	checksumGen *checksum.Generator
+	cfg            *config.Config
+	logger         *observability.Logger
+	fetcher        *fetcher.Fetcher
+	scraper        *scraper.Scraper
+	dateParser     *scraper.DateParser
+	repo           storage.Repository
+	checksumGen    *checksum.Generator
+	saveDebugPages bool
 }
 
 func NewOrchestrator(
@@ -31,15 +32,17 @@ func NewOrchestrator(
 	dp *scraper.DateParser,
 	repo storage.Repository,
 	checksumGen *checksum.Generator,
+	saveDebugPages bool,
 ) *Orchestrator {
 	return &Orchestrator{
-		cfg:         cfg,
-		logger:      logger,
-		fetcher:     f,
-		scraper:     s,
-		dateParser:  dp,
-		repo:        repo,
-		checksumGen: checksumGen,
+		cfg:            cfg,
+		logger:         logger,
+		fetcher:        f,
+		scraper:        s,
+		dateParser:     dp,
+		repo:           repo,
+		checksumGen:    checksumGen,
+		saveDebugPages: saveDebugPages,
 	}
 }
 
@@ -118,7 +121,7 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 		}
 
 		// Парсим листинг
-		cards, err := o.scraper.ParseListing(string(resp.Body))
+		cards, err := o.scraper.ParseListing(string(resp.Body), langCfg.Name, pageNum, o.saveDebugPages)
 		if err != nil {
 			o.logger.Error("Parse listing failed",
 				"language", langCfg.Name,

@@ -19,8 +19,13 @@ import (
 
 func main() {
 	configPath := "configs/config.yaml"
+	saveDebugPages := false
+
 	if len(os.Args) > 1 {
 		configPath = os.Args[1]
+	}
+	if len(os.Args) > 2 && os.Args[2] == "--debug-pages" {
+		saveDebugPages = true
 	}
 
 	// Загружаем конфиг
@@ -110,7 +115,7 @@ func main() {
 		// Создаём компоненты для языка
 		scr := scraper.NewScraper(selectors, cfg.Observability.LogPath, logger)
 		dateParser := scraper.NewDateParser(langCfg.Name)
-		orchestrator := app.NewOrchestrator(cfg, logger, f, scr, dateParser, repo, checksumGen)
+		orchestrator := app.NewOrchestrator(cfg, logger, f, scr, dateParser, repo, checksumGen, saveDebugPages)
 
 		// Запускаем пагинацию
 		stats, err := orchestrator.Run(langCtx, &langCfg)
