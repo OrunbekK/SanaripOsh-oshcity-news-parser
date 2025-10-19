@@ -140,6 +140,35 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 				"thumbnail_url", card.ThumbnailURL,
 			)
 
+			// Если карточка новая — сохраняем в БД
+			if !cardDate.Before(latestKnownDate) {
+				articleCard := &storage.ArticleCard{
+					CanonicalURL: card.URL,
+					Title:        card.Title,
+					Text:         card.Text,
+					ImageURL:     card.ThumbnailURL,
+					Date:         cardDate,
+					Language:     langCfg.Name,
+					SequenceNum:  card.SequenceNum,
+					CheckSum:     o.checksumGen.GenerateContentHash(card.SequenceNum, cardDate.Format("2006-01-02"), card.Title, card.Text, []byte{}),
+				}
+
+				isNew, isUpdated, err := o.repo.UpsertCard(ctx, articleCard)
+				if err != nil {
+					o.logger.Error("Failed to upsert card",
+						"language", langCfg.Name,
+						"url", card.URL,
+						"error", err.Error(),
+					)
+				} else {
+					if isNew {
+						o.logger.Debug("Card saved (new)", "url", card.URL)
+					} else if isUpdated {
+						o.logger.Debug("Card updated", "url", card.URL)
+					}
+				}
+			}
+
 			if cardDate.Before(latestKnownDate) {
 				oldCardsOnPage++
 			}
