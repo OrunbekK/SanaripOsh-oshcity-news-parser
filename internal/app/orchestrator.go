@@ -55,7 +55,23 @@ type PaginationStats struct {
 func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) (*PaginationStats, error) {
 	baseURL := langCfg.BaseURL
 	maxPages := langCfg.MaxPages
+
+	// Получаем default latestKnownDate из конфига
 	latestKnownDate := time.Now().UTC().AddDate(0, 0, -o.cfg.Pagination.DaysBackThreshold).Truncate(24 * time.Hour)
+
+	// Получаем реальную последнюю известную дату из БД
+	dbLatestDate, err := o.repo.GetLatestKnownDate(ctx, langCfg.Name)
+	if err != nil {
+		o.logger.Warn("Failed to get latest known date from DB",
+			"language", langCfg.Name,
+			"error", err.Error(),
+		)
+	} else if !dbLatestDate.IsZero() {
+		// Если в БД есть данные — используем более позднюю дату
+		if dbLatestDate.After(latestKnownDate) {
+			latestKnownDate = dbLatestDate
+		}
+	}
 
 	o.logger.Info("Starting pagination",
 		"language", langCfg.Name,
@@ -70,6 +86,18 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 	consecutiveOldPages := 0
 
 	for pageNum := 1; pageNum <= maxPages; pageNum++ {
+		// Проверяем context на отмену
+		select {
+		case <-ctx.Done():
+			o.logger.Info("Context cancelled, stopping pagination",
+				"language", langCfg.Name,
+				"page", pageNum,
+			)
+			stats.StoppedReason = "shutdown signal received"
+			return stats, ctx.Err()
+		default:
+		}
+
 		o.logger.Info("Processing page",
 			"language", langCfg.Name,
 			"page", pageNum,
@@ -77,7 +105,7 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 		)
 
 		// Фетчим страницу
-		resp, err := o.fetcher.Fetch(ctx, currentURL, langCfg.Name)
+		resp, err := o.fetcher.Fetch(ctx, currentURL, langCfg.AcceptLanguage)
 		if err != nil {
 			o.logger.Error("Fetch failed",
 				"language", langCfg.Name,
@@ -125,7 +153,6 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 					"date_raw", card.DateRaw,
 					"error", err.Error(),
 				)
-				// Считаем как не-старую (ошибка парсинга → новая)
 				continue
 			}
 

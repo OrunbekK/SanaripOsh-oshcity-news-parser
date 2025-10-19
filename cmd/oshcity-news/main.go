@@ -73,8 +73,8 @@ func main() {
 	// Инициализируем generator checksum
 	checksumGen := checksum.NewGenerator()
 
-	// Настраиваем graceful shutdown с таймаутом 10 секунд
-	ctx, cancel := app.GracefulShutdown(logger, 10*time.Second)
+	// Настраиваем graceful shutdown с таймаутом 60 секунд
+	ctx, cancel := app.GracefulShutdown(logger, 60*time.Second)
 	defer cancel()
 
 	logger.Info("Starting pagination", "languages_count", len(cfg.Languages))

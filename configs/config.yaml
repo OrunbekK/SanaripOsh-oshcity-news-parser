@@ -39,10 +39,8 @@ rate_limit:
 
 pagination:
   strategy: "links"
-  max_pages_ru: 60
-  max_pages_ky: 60
   stop_on_known_chain_pages: 10
-  days_back_threshold: 1
+  days_back_threshold: 30
 
 selectors_file:
   ru: "selectors.ru.yaml"
