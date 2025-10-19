@@ -3,7 +3,7 @@ base_urls:
   ky: "https://oshcity.gov.kg/ky/zha%d2%a3ylyktar/"
 
 http:
-  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
   connect_timeout_ms: 10000
   total_timeout_ms: 30000
   max_retries: 3

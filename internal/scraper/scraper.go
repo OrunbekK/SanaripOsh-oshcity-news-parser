@@ -31,32 +31,38 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 	var cards []*Card
 	sequenceNum := 0
 
-	// DEBUG: выводим что нашли по селектору
-	s.logger.Debug("Ищем по селектору: %s\n", s.selectors.CardSelectors)
-	count := doc.Find(s.selectors.CardSelectors).Length()
-	s.logger.Debug("Найдено элементов: %d\n", count)
-
-	// Найти контейнер со списком
 	doc.Find(s.selectors.CardSelectors).Each(func(i int, sel *goquery.Selection) {
 		card := &Card{
 			SequenceNum: sequenceNum,
 		}
 
-		// Title: пробуем селекторы по очереди
+		// Title
 		card.Title = trySelectors(sel, s.selectors.TitleSelectors)
 		if card.Title == "" {
-			return // Пропуск если нет title
+			return
 		}
 
-		// URL: пробуем селекторы
+		// URL
 		urlRaw := trySelectors(sel, s.selectors.URLSelectors)
 		if urlRaw == "" {
 			return
 		}
-		// Нормализуем URL (убираем якоря, параметры)
 		card.URL = normalizeURL(urlRaw)
 
-		// Date: пробуем селекторы
+		// ThumbnailURL
+		thumbRaw := trySelectorsAttr(sel, s.selectors.ImageSelectors, "src")
+		if thumbRaw == "" {
+			return
+		}
+		card.ThumbnailURL = normalizeURL(thumbRaw)
+
+		// Text (превью из листинга)
+		card.Text = trySelectors(sel, s.selectors.TextSelectors)
+		if card.Text == "" {
+			return
+		}
+
+		// Date
 		card.DateRaw = trySelectors(sel, s.selectors.DateSelectors)
 		if card.DateRaw == "" {
 			return
@@ -86,20 +92,57 @@ func (s *Scraper) FindNextPageLink(html string) (string, error) {
 	return "", nil // Нет следующей страницы
 }
 
-func trySelectors(s *goquery.Selection, selectors []string) string {
+// trySelectorsAttr пробует селекторы и возвращает атрибут (например @src)
+func trySelectorsAttr(sel *goquery.Selection, selectors []string, attr string) string {
 	for _, selector := range selectors {
-		text := strings.TrimSpace(s.Find(selector).First().Text())
+		parts := strings.Split(selector, "@")
+		if len(parts) == 2 {
+			selector = parts[0]
+			attr = parts[1]
+		}
+
+		value, exists := sel.Find(selector).First().Attr(attr)
+		if exists && value != "" {
+			// Если это srcset, парсим первый URL
+			fmt.Println(attr, value)
+			if attr == "srcset" {
+				urls := strings.Split(value, ",")
+				fmt.Println(value)
+				for _, urlPair := range urls {
+					parts := strings.Fields(strings.TrimSpace(urlPair))
+					if len(parts) > 0 {
+						url := parts[0]
+						if !strings.HasPrefix(url, "data:") { // Пропускаем data-URI
+							return url
+						}
+					}
+				}
+			}
+			return value
+		}
+	}
+	return ""
+}
+
+func trySelectors(sel *goquery.Selection, selectors []string) string {
+	for _, selector := range selectors {
+		// Если селектор содержит @, парсим как атрибут
+		if strings.Contains(selector, "@") {
+			parts := strings.Split(selector, "@")
+			if len(parts) == 2 {
+				selector = parts[0]
+				attr := parts[1]
+				value, exists := sel.Find(selector).First().Attr(attr)
+				if exists && value != "" {
+					return value
+				}
+			}
+			continue
+		}
+
+		text := strings.TrimSpace(sel.Find(selector).First().Text())
 		if text != "" {
 			return text
-		}
-		// Пробуем атрибут (для ссылок)
-		attr, exists := s.Find(selector).First().Attr("href")
-		if exists && attr != "" {
-			return attr
-		}
-		attr, exists = s.Find(selector).First().Attr("src")
-		if exists && attr != "" {
-			return attr
 		}
 	}
 	return ""

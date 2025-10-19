@@ -1,10 +1,12 @@
 package scraper
 
 type Card struct {
-	Title       string
-	URL         string
-	DateRaw     string
-	SequenceNum int // Номер в листинге (для сортировки)
+	Title        string
+	URL          string
+	ThumbnailURL string
+	Text         string
+	DateRaw      string
+	SequenceNum  int
 }
 
 type Selectors struct {
@@ -12,6 +14,8 @@ type Selectors struct {
 	CardSelectors  string   `yaml:"card_selectors"`
 	TitleSelectors []string `yaml:"title_selectors"`
 	URLSelectors   []string `yaml:"url_selectors"`
+	ImageSelectors []string `yaml:"image_selectors"`
+	TextSelectors  []string `yaml:"text_selectors"`
 	DateSelectors  []string `yaml:"date_selectors"`
 	NextPageLink   []string `yaml:"next_page_link"`
 }

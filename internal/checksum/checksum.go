@@ -3,7 +3,6 @@ package checksum
 import (
 	"crypto/sha256"
 	"fmt"
-	"time"
 )
 
 type Generator struct{}
@@ -12,24 +11,35 @@ func NewGenerator() *Generator {
 	return &Generator{}
 }
 
-// GenerateContentHash генерирует SHA256 хеш контента
-// Формула: SHA256(url|title|text|date_iso)
-func (g *Generator) GenerateContentHash(url, title, text string, date time.Time) string {
-	// Нормализуем дату в ISO формат (без времени)
-	dateISO := date.UTC().Format("2006-01-02")
+// GenerateContentHash генерирует контрольную сумму по формату OshCity
+// TODO: ВАЖНО - Формат совместимости с C# модулем (OshSanaripWebSiteProcessor)
+// Checksum = SHA256(sequenceNum) + SHA256(date_iso) + SHA256(title) + SHA256(text) + SHA256(imageBytes)
+// Каждый хеш конкатенируется (5 хешей x 64 символа = 320 символов total)
+func (g *Generator) GenerateContentHash(sequenceNum int, dateISO, title, text string, imageBytes []byte) string {
+	hash1 := g.sha256String(fmt.Sprintf("%d", sequenceNum))
+	hash2 := g.sha256String(dateISO)
+	hash3 := g.sha256String(title)
+	hash4 := g.sha256String(text)
+	hash5 := g.sha256Bytes(imageBytes)
 
-	// Конкатенируем: url|title|text|date
-	content := fmt.Sprintf("%s|%s|%s|%s", url, title, text, dateISO)
-
-	// Вычисляем SHA256
-	hash := sha256.Sum256([]byte(content))
-
-	// Возвращаем hex
-	return fmt.Sprintf("%x", hash)
+	return hash1 + hash2 + hash3 + hash4 + hash5
 }
 
-// VerifyContentHash проверяет соответствие хеша
-func (g *Generator) VerifyContentHash(expectedHash, url, title, text string, date time.Time) bool {
-	computed := g.GenerateContentHash(url, title, text, date)
+func (g *Generator) sha256String(input string) string {
+	hash := sha256.Sum256([]byte(input))
+	return fmt.Sprintf("%X", hash)
+}
+
+func (g *Generator) sha256Bytes(input []byte) string {
+	hash := sha256.Sum256(input)
+	return fmt.Sprintf("%X", hash)
+}
+
+// VerifyContentHash проверяет соответствие контрольной суммы
+// TODO: ВАЖНО - Формат совместимости с C# модулем (OshSanaripWebSiteProcessor)
+// Checksum = SHA256(sequenceNum) + SHA256(date_iso) + SHA256(title) + SHA256(text) + SHA256(imageBytes)
+// Каждый хеш конкатенируется (5 хешей x 64 символа = 320 символов total)
+func (g *Generator) VerifyContentHash(expectedHash string, sequenceNum int, dateISO, title, text string, imageBytes []byte) bool {
+	computed := g.GenerateContentHash(sequenceNum, dateISO, title, text, imageBytes)
 	return computed == expectedHash
 }

@@ -31,9 +31,11 @@ func main() {
 		ListContainer:  "div.elementor-posts-container",
 		CardSelectors:  "article.elementor-post",
 		TitleSelectors: []string{"h3.elementor-post__title > a", ".elementor-post__title > a"},
-		URLSelectors:   []string{"h3.elementor-post__title > a", ".elementor-post__read-more"},
+		URLSelectors:   []string{"h3.elementor-post__title > a@href", ".elementor-post__read-more@href"},
+		ImageSelectors: []string{".elementor-post__thumbnail img@src", "img.attachment-medium_large@src"},
+		TextSelectors:  []string{".elementor-post__excerpt p", ".elementor-post__excerpt"},
 		DateSelectors:  []string{"span.elementor-post-date", ".elementor-post__meta-data span"},
-		NextPageLink:   []string{"a.next", "a[rel='next']"},
+		NextPageLink:   []string{"nav.elementor-pagination a.next@href", "a.page-numbers.next@href"},
 	}
 
 	// Создаём парсер и фетчер
@@ -66,11 +68,14 @@ func main() {
 		if i >= 3 {
 			break
 		}
-		logger.Info("Card",
+
+		logger.Info("Processing card",
 			"num", i+1,
 			"title", card.Title,
 			"url", card.URL,
+			"thumbnail_url", card.ThumbnailURL,
 			"date", card.DateRaw,
+			"text", card.Text[:min(50, len(card.Text))]+"...",
 		)
 	}
 
