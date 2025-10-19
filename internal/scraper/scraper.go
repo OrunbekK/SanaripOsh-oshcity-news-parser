@@ -5,15 +5,19 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+
+	"oshcity-news-parser/internal/observability"
 )
 
 type Scraper struct {
 	selectors *Selectors
+	logger    *observability.Logger
 }
 
-func NewScraper(selectors *Selectors) *Scraper {
+func NewScraper(selectors *Selectors, logger *observability.Logger) *Scraper {
 	return &Scraper{
 		selectors: selectors,
+		logger:    logger,
 	}
 }
 
@@ -28,9 +32,9 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 	sequenceNum := 0
 
 	// DEBUG: выводим что нашли по селектору
-	fmt.Printf("DEBUG: Ищем по селектору: %s\n", s.selectors.CardSelectors)
+	s.logger.Debug("Ищем по селектору: %s\n", s.selectors.CardSelectors)
 	count := doc.Find(s.selectors.CardSelectors).Length()
-	fmt.Printf("DEBUG: Найдено элементов: %d\n", count)
+	s.logger.Debug("Найдено элементов: %d\n", count)
 
 	// Найти контейнер со списком
 	doc.Find(s.selectors.CardSelectors).Each(func(i int, sel *goquery.Selection) {

@@ -1,5 +1,5 @@
 list_container: "div.news-list"
-card_selectors: "div.news-item"
+card_selectors: "article"
 title_selectors:
   - "h3.news-title"
   - "a.news-link"

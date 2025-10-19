@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"oshcity-news-parser/internal/observability"
 	"time"
 
 	"oshcity-news-parser/internal/config"
@@ -17,6 +19,7 @@ import (
 type Fetcher struct {
 	client      *http.Client
 	cfg         *config.Config
+	logger      *observability.Logger
 	robotsCache *RobotsCache
 	rateLimiter *RateLimiter
 }
@@ -28,7 +31,7 @@ type FetchResponse struct {
 	Headers    http.Header
 }
 
-func NewFetcher(cfg *config.Config) *Fetcher {
+func NewFetcher(cfg *config.Config, logger *observability.Logger) *Fetcher {
 	client := &http.Client{
 		Timeout: cfg.GetTotalTimeout(),
 		Transport: &http.Transport{
@@ -41,6 +44,7 @@ func NewFetcher(cfg *config.Config) *Fetcher {
 	return &Fetcher{
 		client:      client,
 		cfg:         cfg,
+		logger:      logger,
 		robotsCache: NewRobotsCache(12 * time.Hour),
 		rateLimiter: NewRateLimiter(cfg.RateLimit.MaxConcurrentPerHost, cfg.RateLimit.RPM),
 	}
@@ -127,10 +131,27 @@ func (f *Fetcher) fetchOnce(ctx context.Context, urlStr string, lang string) (*F
 		}
 	}()
 
-	body, err := io.ReadAll(resp.Body)
+	reader := resp.Body
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		gzipReader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = gzipReader.Close() }()
+		reader = gzipReader
+	}
+
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
+
+	// LOG: проверяем как пришёл ответ
+	f.logger.Debug("Response Headers:\n")
+	f.logger.Debug("  Content-Encoding: %s\n", resp.Header.Get("Content-Encoding"))
+	f.logger.Debug("  Content-Type: %s\n", resp.Header.Get("Content-Type"))
+	f.logger.Debug("  Content-Length: %s\n", resp.Header.Get("Content-Length"))
+	f.logger.Debug("  Actual Body Size: %d bytes\n", len(body))
 
 	return &FetchResponse{
 		StatusCode: resp.StatusCode,

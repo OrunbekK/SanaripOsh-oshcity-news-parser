@@ -47,5 +47,5 @@ scheduler:
 
 observability:
   log_path: "logs/app.log"
-  log_level: "info"
+  log_level: "debug"
   metrics_path: "logs/metrics.log"

@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
 	"oshcity-news-parser/internal/config"
 	"oshcity-news-parser/internal/fetcher"
+	"oshcity-news-parser/internal/observability"
 	"oshcity-news-parser/internal/scraper"
 )
 
@@ -22,6 +22,10 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Инициализируем logger
+	logger := observability.NewLogger(cfg.Observability.LogPath, cfg.Observability.LogLevel)
+	logger.Info("Application started", "config", configPath)
+
 	// Загружаем селекторы
 	selectorsRU := &scraper.Selectors{
 		ListContainer:  "div.elementor-posts-container",
@@ -33,34 +37,42 @@ func main() {
 	}
 
 	// Создаём парсер и фетчер
-	f := fetcher.NewFetcher(cfg)
-	scr := scraper.NewScraper(selectorsRU)
+	f := fetcher.NewFetcher(cfg, logger)
+	scr := scraper.NewScraper(selectorsRU, logger)
+
+	logger.Info("Fetching news", "url", cfg.BaseURLs.RU, "language", "ru")
 
 	// Фетчим первую страницу
 	ctx := context.Background()
 	resp, err := f.Fetch(ctx, cfg.BaseURLs.RU, "ru")
 	if err != nil {
+		logger.Error("Fetch failed", "error", err.Error())
 		log.Fatalf("Fetch failed: %v", err)
 	}
 
-	fmt.Printf("Fetched %d bytes\n", len(resp.Body))
+	logger.Info("Fetched successfully", "size", len(resp.Body))
 
 	// Парсим листинг
 	cards, err := scr.ParseListing(string(resp.Body))
 	if err != nil {
+		logger.Error("Parse failed", "error", err.Error())
 		log.Fatalf("Parse failed: %v", err)
 	}
 
-	fmt.Printf("Found %d cards\n\n", len(cards))
+	logger.Info("Parsing completed", "cards-found", len(cards))
 
 	// Выводим первые 3 карточки
 	for i, card := range cards {
 		if i >= 3 {
 			break
 		}
-		fmt.Printf("[%d] Title: %s\n", i+1, card.Title)
-		fmt.Printf("    URL: %s\n", card.URL)
-		fmt.Printf("    Date: %s\n", card.DateRaw)
-		fmt.Printf("\n")
+		logger.Info("Card",
+			"num", i+1,
+			"title", card.Title,
+			"url", card.URL,
+			"date", card.DateRaw,
+		)
 	}
+
+	logger.Info("Application finished")
 }
