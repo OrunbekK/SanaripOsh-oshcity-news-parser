@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"oshcity-news-parser/internal/checksum"
+	"oshcity-news-parser/internal/storage"
 	"time"
 
 	"oshcity-news-parser/internal/config"
@@ -12,11 +14,13 @@ import (
 )
 
 type Orchestrator struct {
-	cfg        *config.Config
-	logger     *observability.Logger
-	fetcher    *fetcher.Fetcher
-	scraper    *scraper.Scraper
-	dateParser *scraper.DateParser
+	cfg         *config.Config
+	logger      *observability.Logger
+	fetcher     *fetcher.Fetcher
+	scraper     *scraper.Scraper
+	dateParser  *scraper.DateParser
+	repo        storage.Repository
+	checksumGen *checksum.Generator
 }
 
 func NewOrchestrator(
@@ -25,13 +29,17 @@ func NewOrchestrator(
 	f *fetcher.Fetcher,
 	s *scraper.Scraper,
 	dp *scraper.DateParser,
+	repo storage.Repository,
+	checksumGen *checksum.Generator,
 ) *Orchestrator {
 	return &Orchestrator{
-		cfg:        cfg,
-		logger:     logger,
-		fetcher:    f,
-		scraper:    s,
-		dateParser: dp,
+		cfg:         cfg,
+		logger:      logger,
+		fetcher:     f,
+		scraper:     s,
+		dateParser:  dp,
+		repo:        repo,
+		checksumGen: checksumGen,
 	}
 }
 

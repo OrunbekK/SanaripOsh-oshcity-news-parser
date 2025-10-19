@@ -208,12 +208,12 @@ func (r *Repository) GetCardCount(ctx context.Context, lang string) (int, error)
 }
 
 // getLanguageUID получает UID языка по коду (ru, ky)
-func (r *Repository) getLanguageUID(ctx context.Context, langCode string) (string, error) {
-	query := `SELECT UID FROM TblLanguage WHERE Code = @Code`
+func (r *Repository) getLanguageUID(ctx context.Context, langAlias string) (int, error) {
+	query := `SELECT UID FROM TblRefLanguages WHERE Alias = @Alias`
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		return "", fmt.Errorf("failed to prepare statement: %w", err)
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer func() {
 		if err := stmt.Close(); err != nil {
@@ -221,13 +221,13 @@ func (r *Repository) getLanguageUID(ctx context.Context, langCode string) (strin
 		}
 	}()
 
-	var uid string
-	err = stmt.QueryRowContext(ctx, sql.Named("Code", langCode)).Scan(&uid)
+	var uid int
+	err = stmt.QueryRowContext(ctx, sql.Named("Alias", langAlias)).Scan(&uid)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", fmt.Errorf("language not found: %s", langCode)
+			return 0, fmt.Errorf("language not found: %s", langAlias)
 		}
-		return "", fmt.Errorf("failed to query database: %w", err)
+		return 0, fmt.Errorf("failed to query database: %w", err)
 	}
 
 	return uid, nil
