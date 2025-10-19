@@ -165,7 +165,7 @@ func (f *Fetcher) fetchOnce(ctx context.Context, urlStr string, lang string) (*F
 }
 
 func (f *Fetcher) fetchWithRod(ctx context.Context, urlStr string, lang string) (*FetchResponse, error) {
-	f.logger.Info("Fetching with Rod", "url", urlStr)
+	f.logger.Debug("Fetching with Rod", "url", urlStr)
 
 	page := f.browser.MustPage(urlStr)
 	defer func() {
