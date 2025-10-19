@@ -48,7 +48,27 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 			html, _ := sel.Html()
 			s.logger.Debug("Card skipped: no title")
 			s.saveDebugCard(sequenceNum, "(no title)", html, "no_title")
-			return
+
+			if card.DateRaw != "" {
+				card.Title = card.DateRaw
+			} else if card.Text != "" {
+				// Берём до первой точки, или до восклицательного знака, или первые 500 символов
+				text := strings.TrimSpace(card.Text)
+
+				// Ищем первую точку
+				if idx := strings.Index(text, "."); idx > 0 {
+					card.Title = text[:idx]
+				} else if idx := strings.Index(text, "!"); idx > 0 {
+					card.Title = text[:idx]
+				} else if len(text) > 500 {
+					card.Title = text[:500] + "..."
+				} else {
+					card.Title = text
+				}
+
+			} else {
+				return
+			}
 		}
 
 		// URL
