@@ -108,7 +108,7 @@ func main() {
 		langCtx, langCancel := context.WithTimeout(context.Background(), langTimeout)
 
 		// Создаём компоненты для языка
-		scr := scraper.NewScraper(selectors, logger)
+		scr := scraper.NewScraper(selectors, cfg.Observability.LogPath, logger)
 		dateParser := scraper.NewDateParser(langCfg.Name)
 		orchestrator := app.NewOrchestrator(cfg, logger, f, scr, dateParser, repo, checksumGen)
 

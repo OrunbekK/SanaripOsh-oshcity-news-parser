@@ -2,6 +2,8 @@ package scraper
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -11,12 +13,14 @@ import (
 
 type Scraper struct {
 	selectors *Selectors
+	debugDir  string
 	logger    *observability.Logger
 }
 
-func NewScraper(selectors *Selectors, logger *observability.Logger) *Scraper {
+func NewScraper(selectors *Selectors, debugDir string, logger *observability.Logger) *Scraper {
 	return &Scraper{
 		selectors: selectors,
+		debugDir:  debugDir,
 		logger:    logger,
 	}
 }
@@ -42,18 +46,16 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		card.Title = trySelectors(sel, s.selectors.TitleSelectors)
 		if card.Title == "" {
 			html, _ := sel.Html()
-			s.logger.Debug("Card skipped: no title found",
-				"html_preview", html[:min(400, len(html))],
-			)
+			s.logger.Debug("Card skipped: no title")
+			s.saveDebugCard(sequenceNum, "(no title)", html, "no_title")
 			return
 		}
 
 		// URL
 		urlRaw := trySelectors(sel, s.selectors.URLSelectors)
 		if urlRaw == "" {
-			s.logger.Debug("Card skipped: no url",
-				"html_preview", html[:min(400, len(html))],
-			)
+			s.logger.Debug("Card skipped: no url")
+			s.saveDebugCard(sequenceNum, card.Title, html, "no_url")
 			return
 		}
 		card.URL = normalizeURL(urlRaw)
@@ -61,9 +63,8 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		// ThumbnailURL
 		thumbRaw := trySelectorsAttr(sel, s.selectors.ImageSelectors, "src")
 		if thumbRaw == "" {
-			s.logger.Debug("Card skipped: no thumb",
-				"html_preview", html[:min(400, len(html))],
-			)
+			s.logger.Debug("Card skipped: no thumb")
+			s.saveDebugCard(sequenceNum, html, card.Title, "no_thumb")
 			return
 		}
 		card.ThumbnailURL = normalizeURL(thumbRaw)
@@ -71,18 +72,16 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		// Text (превью из листинга)
 		card.Text = trySelectors(sel, s.selectors.TextSelectors)
 		if card.Text == "" {
-			s.logger.Debug("Card skipped: no text",
-				"html_preview", html[:min(400, len(html))],
-			)
+			s.logger.Debug("Card skipped: no text")
+			s.saveDebugCard(sequenceNum, html, card.Title, "no_text")
 			return
 		}
 
 		// Date
 		card.DateRaw = trySelectors(sel, s.selectors.DateSelectors)
 		if card.DateRaw == "" {
-			s.logger.Debug("Card skipped: no date",
-				"html_preview", html[:min(400, len(html))],
-			)
+			s.logger.Debug("Card skipped: no date")
+			s.saveDebugCard(sequenceNum, html, card.Title, "no_date")
 			return
 		}
 
@@ -194,4 +193,42 @@ func normalizeURL(urlStr string) string {
 		urlStr = urlStr[:idx]
 	}
 	return urlStr
+}
+
+func (s *Scraper) saveDebugCard(sequenceNum int, cardTitle string, html string, reason string) {
+	debugDir := filepath.Dir(s.debugDir)
+	debugDir = filepath.Join(debugDir, "debug")
+
+	// Создаём директорию, если её нет
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		s.logger.Error("Failed to create debug directory", "dir", debugDir, "error", err.Error())
+		return
+	}
+	// Генерируем уникальное имя файла
+	filename := ""
+	for i := 0; i < 100; i++ {
+		candidateName := fmt.Sprintf("%s/card_%s_%d.html", debugDir, reason, i)
+		if _, err := os.Stat(candidateName); os.IsNotExist(err) {
+			filename = candidateName
+			break
+		}
+	}
+
+	if filename == "" {
+		s.logger.Error("Failed to generate unique debug filename")
+		return
+	}
+
+	// Сохраняем HTML
+	if err := os.WriteFile(filename, []byte(html), 0644); err != nil {
+		s.logger.Error("Failed to write debug file", "error", err.Error())
+		return
+	}
+
+	s.logger.Debug("Debug card saved",
+		"card_num", sequenceNum,
+		"card_title", cardTitle,
+		"reason", reason,
+		"file", filename,
+	)
 }
