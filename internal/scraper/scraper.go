@@ -36,11 +36,12 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 	sequenceNum := 0
 
 	doc.Find(s.selectors.CardSelectors).Each(func(i int, sel *goquery.Selection) {
+		sequenceNum++
+		s.logger.Debug("Processing card", "card_num", sequenceNum)
+
 		card := &Card{
 			SequenceNum: sequenceNum,
 		}
-
-		s.logger.Debug("Processing card", "card_num", sequenceNum)
 
 		// Title
 		card.Title = trySelectors(sel, s.selectors.TitleSelectors)
