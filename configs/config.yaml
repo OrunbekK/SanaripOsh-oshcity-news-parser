@@ -3,12 +3,12 @@ languages:
     base_url: "https://oshcity.gov.kg/ru/novosti/"
     selectors_file: "selectors.ru.yaml"
     accept_language: "ru-RU,ru;q=0.9"
-    max_pages: 60
+    max_pages: 10
   - name: "kg"
     base_url: "https://oshcity.gov.kg/ky/zha%d2%a3ylyktar/"
     selectors_file: "selectors.kg.yaml"
     accept_language: "ky-KG,ky;q=0.9"
-    max_pages: 60
+    max_pages: 10
 
 rod:
   enabled: true
@@ -70,3 +70,6 @@ observability:
   log_path: "logs/app.log"
   log_level: "debug"
   metrics_path: "logs/metrics.log"
+  max_log_age_days: 30
+  max_log_size_mb: 100
+  max_backups: 5

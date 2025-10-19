@@ -92,9 +92,12 @@ type SchedulerConfig struct {
 }
 
 type ObservabilityConfig struct {
-	LogPath     string `yaml:"log_path"`
-	LogLevel    string `yaml:"log_level"`
-	MetricsPath string `yaml:"metrics_path"`
+	LogPath       string `yaml:"log_path"`
+	LogLevel      string `yaml:"log_level"`
+	MetricsPath   string `yaml:"metrics_path"`
+	MaxLogAgeDays int    `yaml:"max_log_age_days"`
+	MaxLogSizeMB  int    `yaml:"max_log_size_mb"`
+	MaxBackups    int    `yaml:"max_backups"`
 }
 
 // Validation

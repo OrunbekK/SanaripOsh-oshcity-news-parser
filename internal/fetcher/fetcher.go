@@ -99,7 +99,7 @@ func (f *Fetcher) Close() error {
 	return nil
 }
 
-func (f *Fetcher) Fetch(ctx context.Context, urlStr string, lang string) (*FetchResponse, error) {
+func (f *Fetcher) Fetch(ctx context.Context, urlStr string, acceptLanguage string) (*FetchResponse, error) {
 	// Parse URL to get host
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
@@ -134,7 +134,7 @@ func (f *Fetcher) Fetch(ctx context.Context, urlStr string, lang string) (*Fetch
 			}
 		}
 
-		resp, err := f.fetchOnce(ctx, urlStr, lang)
+		resp, err := f.fetchOnce(ctx, urlStr, acceptLanguage)
 		if err != nil {
 			lastErr = err
 			continue
@@ -193,7 +193,7 @@ func (f *Fetcher) fetchWithRod(ctx context.Context, urlStr string, lang string) 
 	}, nil
 }
 
-func (f *Fetcher) fetchWithHTTP(ctx context.Context, urlStr string, lang string) (*FetchResponse, error) {
+func (f *Fetcher) fetchWithHTTP(ctx context.Context, urlStr string, acceptLanguage string) (*FetchResponse, error) {
 	f.logger.Info("Fetching with HTTP", "url", urlStr)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
@@ -202,7 +202,7 @@ func (f *Fetcher) fetchWithHTTP(ctx context.Context, urlStr string, lang string)
 	}
 
 	req.Header.Set("User-Agent", f.cfg.HTTP.UserAgent)
-	req.Header.Set("Accept-Language", f.getAcceptLanguage(lang))
+	req.Header.Set("Accept-Language", acceptLanguage)
 	req.Header.Set("Accept-Encoding", "gzip, deflate")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 	req.Header.Set("Connection", "keep-alive")
@@ -265,11 +265,4 @@ func (f *Fetcher) calculateBackoff(attempt int) time.Duration {
 	}
 
 	return time.Duration(math.Max(finalMS, 0)) * time.Millisecond
-}
-
-func (f *Fetcher) getAcceptLanguage(lang string) string {
-	if lang == "ky" {
-		return f.cfg.HTTP.AcceptLanguageKY
-	}
-	return f.cfg.HTTP.AcceptLanguageRU
 }

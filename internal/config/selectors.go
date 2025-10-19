@@ -48,23 +48,27 @@ func LoadSelectors(filePath string) (*scraper.Selectors, error) {
 }
 
 // LoadSelectorsForLanguage загружает селекторы на основе конфига и языка
-func (c *Config) LoadSelectorsForLanguage(lang string) (*scraper.Selectors, error) {
-	var filePath string
+func (c *Config) LoadSelectorsForLanguage(langCfg *LanguageConfig) (*scraper.Selectors, error) {
+	filePath := langCfg.SelectorsFile
 
-	if lang == "ky" {
-		filePath = c.SelectorsFile.KY
-	} else if lang == "ru" {
-		filePath = c.SelectorsFile.RU
-	} else {
-		return nil, fmt.Errorf("unsupported language: %s", lang)
+	// Если полный путь — используем как есть
+	if filepath.IsAbs(filePath) {
+		return LoadSelectors(filePath)
 	}
 
-	// Если путь относительный, делаем его относительно конфига
-	if !filepath.IsAbs(filePath) {
-		filePath = filepath.Join("configs", filePath)
+	// Если относительный путь существует — используем его
+	if _, err := os.Stat(filePath); err == nil {
+		return LoadSelectors(filePath)
 	}
 
-	return LoadSelectors(filePath)
+	// Иначе ищем в папке configs
+	configsPath := filepath.Join("configs", filePath)
+	if _, err := os.Stat(configsPath); err == nil {
+		return LoadSelectors(configsPath)
+	}
+
+	// Если ничего не нашли — ошибка
+	return nil, fmt.Errorf("selectors file not found: %s (tried: %s, %s)", filePath, filePath, configsPath)
 }
 
 // validateSelectors проверяет минимальный набор селекторов
