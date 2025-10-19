@@ -35,7 +35,7 @@ pagination:
   strategy: "links"
   max_pages_ru: 60
   max_pages_ky: 60
-  stop_on_known_chain_pages: 2
+  stop_on_known_chain_pages: 10
   days_back_threshold: 1
 
 selectors_file:

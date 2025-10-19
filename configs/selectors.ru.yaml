@@ -18,6 +18,5 @@ text_selectors:
   - ".elementor-post__excerpt p"
   - ".elementor-post__excerpt"
 next_page_link:
-  - "nav.elementor-pagination a.next"
+  - "nav.elementor-pagination a.page-numbers.next@href"
   - "a.page-numbers.next@href"
-  - ".elementor-pagination a.next@href"

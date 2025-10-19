@@ -35,16 +35,10 @@ func main() {
 		}
 	}()
 
-	// Загружаем селекторы для RU
-	selectorsRU := &scraper.Selectors{
-		ListContainer:  "div.elementor-posts-container",
-		CardSelectors:  "article.elementor-post",
-		TitleSelectors: []string{"h3.elementor-post__title > a", ".elementor-post__title > a"},
-		URLSelectors:   []string{"h3.elementor-post__title > a@href", ".elementor-post__read-more@href"},
-		ImageSelectors: []string{".elementor-post__thumbnail img@src", "img.attachment-medium_large@src"},
-		TextSelectors:  []string{".elementor-post__excerpt p", ".elementor-post__excerpt"},
-		DateSelectors:  []string{"span.elementor-post-date", ".elementor-post__meta-data span"},
-		NextPageLink:   []string{"nav.elementor-pagination a.next@href", "a.page-numbers.next@href"},
+	// Загружаем селекторы из файлов
+	selectorsRU, err := cfg.LoadSelectorsForLanguage("ru")
+	if err != nil {
+		log.Fatalf("Failed to load RU selectors: %v", err)
 	}
 
 	// Создаём парсер (используем RU селекторы для примера)

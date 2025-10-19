@@ -111,7 +111,7 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 
 		// Проверяем, сколько карточек старые
 		oldCardsOnPage := 0
-		for _, card := range cards {
+		for i, card := range cards {
 			cardDate, err := o.dateParser.Parse(card.DateRaw)
 			if err != nil {
 				o.logger.Warn("Failed to parse card date",
@@ -124,6 +124,17 @@ func (o *Orchestrator) Run(ctx context.Context, lang string) (*PaginationStats, 
 				// Считаем как не-старую (ошибка парсинга → новая)
 				continue
 			}
+
+			// Debug: выводим информацию по каждой карточке
+			o.logger.Debug("Card info",
+				"language", lang,
+				"page", pageNum,
+				"card_num", i+1,
+				"title", card.Title,
+				"date", cardDate.Format("2006-01-02"),
+				"url", card.URL,
+				"thumbnail_url", card.ThumbnailURL,
+			)
 
 			if cardDate.Before(latestKnownDate) {
 				oldCardsOnPage++

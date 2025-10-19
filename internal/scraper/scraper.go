@@ -82,11 +82,32 @@ func (s *Scraper) FindNextPageLink(html string) (string, error) {
 		return "", fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
-	for _, selector := range s.selectors.NextPageLink {
-		href, exists := doc.Find(selector).Attr("href")
+	for _, selectorStr := range s.selectors.NextPageLink {
+		// Парсим селектор с атрибутом (например "a.next@href")
+		selector := selectorStr
+		attr := "href" // по умолчанию
+
+		if strings.Contains(selectorStr, "@") {
+			parts := strings.Split(selectorStr, "@")
+			if len(parts) == 2 {
+				selector = parts[0]
+				attr = parts[1]
+			}
+		}
+
+		// Ищем элемент и берём атрибут
+		href, exists := doc.Find(selector).First().Attr(attr)
 		if exists && href != "" {
+			s.logger.Debug("Found next page link",
+				"selector", selectorStr,
+				"href", href,
+			)
 			return normalizeURL(href), nil
 		}
+
+		s.logger.Debug("Next page link selector not found",
+			"selector", selectorStr,
+		)
 	}
 
 	return "", nil // Нет следующей страницы
