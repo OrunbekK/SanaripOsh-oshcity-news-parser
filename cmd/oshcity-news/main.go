@@ -77,19 +77,19 @@ func main() {
 	// Инициализируем generator checksum
 	checksumGen := checksum.NewGenerator()
 
-	// Настраиваем graceful shutdown с таймаутом 60 секунд
+	// Настраиваем graceful shutdown
 	shutdownTimeout := time.Duration(cfg.Scheduler.GracefulShutdownTimeoutS) * time.Second
-	ctx, cancel := app.GracefulShutdown(logger, shutdownTimeout)
-	defer cancel()
+	mainCtx, mainCancel := app.GracefulShutdown(logger, shutdownTimeout)
+	defer mainCancel()
 
 	logger.Info("Starting pagination", "languages_count", len(cfg.Languages))
 
 	// Запускаем пагинацию для каждого языка из конфига
 	for _, langCfg := range cfg.Languages {
-		// Проверяем был ли сигнал shutdown
+		// Проверяем, не истёк ли main context (graceful shutdown)
 		select {
-		case <-ctx.Done():
-			logger.Info("Shutdown signal detected, stopping pagination")
+		case <-mainCtx.Done():
+			logger.Info("Shutdown signal detected, stopping language processing")
 			break
 		default:
 		}
@@ -103,16 +103,24 @@ func main() {
 			continue
 		}
 
+		// Создаём отдельный context для каждого языка с таймаутом из конфига
+		langTimeout := time.Duration(langCfg.TimeoutSeconds) * time.Second
+		langCtx, langCancel := context.WithTimeout(context.Background(), langTimeout)
+
 		// Создаём компоненты для языка
 		scr := scraper.NewScraper(selectors, logger)
 		dateParser := scraper.NewDateParser(langCfg.Name)
 		orchestrator := app.NewOrchestrator(cfg, logger, f, scr, dateParser, repo, checksumGen)
 
-		// Запускаем пагинацию с передачей context
-		stats, err := orchestrator.Run(ctx, &langCfg)
+		// Запускаем пагинацию
+		stats, err := orchestrator.Run(langCtx, &langCfg)
+		langCancel()
+
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				logger.Info("Pagination cancelled by shutdown signal", "language", langCfg.Name)
+			} else if errors.Is(err, context.DeadlineExceeded) {
+				logger.Error("Pagination timeout exceeded", "language", langCfg.Name, "timeout_seconds", langCfg.TimeoutSeconds)
 			} else {
 				logger.Error("Pagination failed", "language", langCfg.Name, "error", err.Error())
 			}
@@ -129,7 +137,7 @@ func main() {
 
 	// Обновляем контрольные суммы новостей в БД
 	logger.Info("Updating news checksums in database")
-	msg, err := repo.UpdateNewsCheckSum(ctx)
+	msg, err := repo.UpdateNewsCheckSum(mainCtx)
 	if err != nil {
 		logger.Error("Failed to update news checksums", "error", err.Error())
 	} else {

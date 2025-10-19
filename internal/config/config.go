@@ -26,6 +26,7 @@ type LanguageConfig struct {
 	SelectorsFile  string `yaml:"selectors_file"`
 	AcceptLanguage string `yaml:"accept_language"`
 	MaxPages       int    `yaml:"max_pages"`
+	TimeoutSeconds int    `yaml:"timeout_seconds"`
 }
 
 type RodConfig struct {

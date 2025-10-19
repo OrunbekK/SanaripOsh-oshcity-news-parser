@@ -3,12 +3,14 @@ languages:
     base_url: "https://oshcity.gov.kg/ru/novosti/"
     selectors_file: "selectors.ru.yaml"
     accept_language: "ru-RU,ru;q=0.9"
-    max_pages: 10
+    max_pages: 5
+    timeout_seconds: 300
   - name: "kg"
     base_url: "https://oshcity.gov.kg/ky/zha%d2%a3ylyktar/"
     selectors_file: "selectors.kg.yaml"
     accept_language: "ky-KG,ky;q=0.9"
-    max_pages: 10
+    max_pages: 5
+    timeout_seconds: 300
 
 rod:
   enabled: true
@@ -40,7 +42,7 @@ rate_limit:
 pagination:
   strategy: "links"
   stop_on_known_chain_pages: 10
-  days_back_threshold: 365
+  days_back_threshold: 120
 
 selectors_file:
   ru: "selectors.ru.yaml"
