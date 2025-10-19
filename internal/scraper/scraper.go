@@ -46,12 +46,15 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		card.Title = trySelectors(sel, s.selectors.TitleSelectors)
 		if card.Title == "" {
 			html, _ := sel.Html()
-			s.logger.Debug("Card skipped: no title")
-			s.saveDebugCard(sequenceNum, "(no title)", html, "no_title")
 
 			if card.DateRaw != "" {
 				card.Title = card.DateRaw
+				s.logger.Debug("Invalid card: no title")
+				s.saveDebugCard(sequenceNum, "(no title)", html, "no_title")
 			} else if card.Text != "" {
+				s.logger.Debug("Invalid card: no title")
+				s.saveDebugCard(sequenceNum, "(no title)", html, "no_title")
+
 				// Берём до первой точки, или до восклицательного знака, или первые 500 символов
 				text := strings.TrimSpace(card.Text)
 
@@ -67,6 +70,8 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 				}
 
 			} else {
+				s.logger.Debug("Card skipped: no title")
+				s.saveDebugCard(sequenceNum, "(no title)", html, "no_title")
 				return
 			}
 		}
@@ -83,7 +88,7 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		// ThumbnailURL
 		thumbRaw := trySelectorsAttr(sel, s.selectors.ImageSelectors, "src")
 		if thumbRaw == "" {
-			s.logger.Debug("Card skipped: no thumb")
+			s.logger.Debug("Invalid card: no thumb")
 			s.saveDebugCard(sequenceNum, html, card.Title, "no_thumb")
 			card.ThumbnailURL = ""
 		}
