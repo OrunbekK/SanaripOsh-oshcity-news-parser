@@ -48,18 +48,19 @@ func (r *Repository) UpsertCard(ctx context.Context, card *storage.ArticleCard) 
 	// MERGE statement для MS SQL
 	query := `
 		MERGE INTO TblNews AS target
-		USING (SELECT @CanonicalURL AS CanonicalURL) AS source
-		ON target.URL = source.CanonicalURL
+		USING (SELECT @URL AS URL) AS source
+		ON target.[URL] = source.URL
 		WHEN MATCHED THEN
 			UPDATE SET
-				Title = @Title,
-				Text = @Text,
-				ThumbnailURL = @ImageURL,
-				DT = @DateUTC,
-				UpdatedDT = GETUTCDATE()
+				[Title] = @Title,
+				[Text] = @Text,
+				[ThumbnailURL] = @ThumbnailURL,
+				[DT] = @DT,
+				[CheckSum] = @CheckSum,
+				[SequenceNum] = @SequenceNum
 		WHEN NOT MATCHED THEN
-			INSERT (Language_UID, URL, Title, Text, ThumbnailURL, DT, CreatedDT, UpdatedDT, SequenceNum)
-			VALUES (@LanguageUID, @CanonicalURL, @Title, @Text, @ImageURL, @DateUTC, GETUTCDATE(), GETUTCDATE(), 0);
+			INSERT ([Language_UID], [SequenceNum], [DT], [Title], [Text], [URL], [ThumbnailURL], [CheckSum])
+			VALUES (@LanguageUID, @SequenceNum, @DT, @Title, @Text, @URL, @ThumbnailURL, @CheckSum);
 	`
 
 	// Получаем Language_UID по коду языка
@@ -83,12 +84,14 @@ func (r *Repository) UpsertCard(ctx context.Context, card *storage.ArticleCard) 
 	}()
 
 	result, err := stmt.ExecContext(ctx,
-		sql.Named("CanonicalURL", card.CanonicalURL),
 		sql.Named("LanguageUID", languageUID),
+		sql.Named("SequenceNum", card.SequenceNum),
 		sql.Named("Title", card.Title),
 		sql.Named("Text", card.Text),
-		sql.Named("ImageURL", card.ImageURL),
-		sql.Named("DateUTC", card.DateUTC),
+		sql.Named("URL", card.CanonicalURL),
+		sql.Named("ThumbnailURL", card.ImageURL),
+		sql.Named("DT", card.Date),
+		sql.Named("CheckSum", card.CheckSum),
 	)
 
 	if err != nil {

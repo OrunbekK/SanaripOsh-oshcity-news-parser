@@ -7,12 +7,14 @@ import (
 
 // ArticleCard представляет обработанную карточку для сохранения в БД
 type ArticleCard struct {
-	CanonicalURL string
+	CanonicalURL string // URL из Card
 	Title        string
 	Text         string
-	ImageURL     string
-	DateUTC      time.Time
+	ImageURL     string // ThumbnailURL из Card
+	Date         time.Time
 	Language     string
+	SequenceNum  int    // Из Card
+	CheckSum     string // SHA256 контента (256 символов)
 }
 
 // Repository интерфейс для работы с хранилищем карточек
