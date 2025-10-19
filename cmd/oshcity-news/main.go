@@ -5,6 +5,9 @@ import (
 	"errors"
 	"log"
 	"os"
+	"oshcity-news-parser/internal/checksum"
+	"oshcity-news-parser/internal/storage"
+	"oshcity-news-parser/internal/storage/mssql"
 	"time"
 
 	"oshcity-news-parser/internal/app"
@@ -45,6 +48,31 @@ func main() {
 		}
 	}()
 
+	// Инициализируем Repository
+	var repo storage.Repository
+	if cfg.Storage.Driver == "mssql" {
+		mssqlRepo, err := mssql.NewRepository(
+			cfg.Storage.DSN,
+			cfg.Storage.CommandTimeoutMS,
+			logger,
+		)
+		if err != nil {
+			log.Fatalf("Failed to initialize MS SQL repository: %v", err)
+		}
+		defer func() {
+			logger.Info("Closing repository")
+			if err := mssqlRepo.Close(); err != nil {
+				logger.Error("Failed to close repository", "error", err.Error())
+			}
+		}()
+		repo = mssqlRepo
+	} else {
+		log.Fatalf("Unsupported storage driver: %s", cfg.Storage.Driver)
+	}
+
+	// Инициализируем generator checksum
+	checksumGen := checksum.NewGenerator()
+
 	// Настраиваем graceful shutdown с таймаутом 10 секунд
 	ctx, cancel := app.GracefulShutdown(logger, 10*time.Second)
 	defer cancel()
@@ -73,7 +101,7 @@ func main() {
 		// Создаём компоненты для языка
 		scr := scraper.NewScraper(selectors, logger)
 		dateParser := scraper.NewDateParser(langCfg.Name)
-		orchestrator := app.NewOrchestrator(cfg, logger, f, scr, dateParser)
+		orchestrator := app.NewOrchestrator(cfg, logger, f, scr, dateParser, repo, checksumGen)
 
 		// Запускаем пагинацию с передачей context
 		stats, err := orchestrator.Run(ctx, &langCfg)
