@@ -40,9 +40,9 @@ func NewFetcher(cfg *config.Config, logger *observability.Logger) *Fetcher {
 	client := &http.Client{
 		Timeout: cfg.GetTotalTimeout(),
 		Transport: &http.Transport{
-			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 10,
-			IdleConnTimeout:     90 * time.Second,
+			MaxIdleConns:        cfg.HTTP.MaxIdleConnections,
+			MaxIdleConnsPerHost: cfg.HTTP.MaxIdleConnectionsPerHost,
+			IdleConnTimeout:     cfg.GetIdleConnectionTimeout(),
 		},
 	}
 
@@ -71,8 +71,11 @@ func (f *Fetcher) initRod() {
 		}
 	}()
 
-	// Автоматически найдёт установленный Chrome/Chromium
-	u, err := launcher.New().Launch()
+	// Используем установленный Chrome вместо скачивания
+	u, err := launcher.New().
+		Bin(f.cfg.Rod.ChromePath).
+		Launch()
+
 	if err != nil {
 		f.logger.Error("Failed to launch browser", "error", err.Error())
 		f.useRod = false
@@ -169,11 +172,13 @@ func (f *Fetcher) fetchWithRod(ctx context.Context, urlStr string, lang string) 
 		_ = page.Close()
 	}()
 
-	// Ждём загрузки страницы
-	page.MustWaitLoad()
+	// Ждём загрузки с timeout
+	if err := page.Timeout(time.Duration(f.cfg.Rod.WaitLoadTimeoutS) * time.Second).WaitLoad(); err != nil {
+		return nil, fmt.Errorf("failed to wait for page load: %w", err)
+	}
 
-	// Небольшая задержка для lazy-load изображений
-	time.Sleep(2 * time.Second)
+	// Задержка для lazy-load
+	time.Sleep(time.Duration(f.cfg.Rod.LazyLoadDelayS) * time.Second)
 
 	// Получаем полный HTML
 	html := page.MustHTML()
@@ -242,9 +247,9 @@ func (f *Fetcher) fetchWithHTTP(ctx context.Context, urlStr string, lang string)
 }
 
 func (f *Fetcher) calculateBackoff(attempt int) time.Duration {
-	minMS := f.cfg.HTTP.BackoffMinMS
-	maxMS := f.cfg.HTTP.BackoffMaxMS
-	jitterPct := f.cfg.HTTP.JitterPct
+	minMS := f.cfg.Backoff.MinMS
+	maxMS := f.cfg.Backoff.MaxMS
+	jitterPct := f.cfg.Backoff.JitterPct
 
 	exponential := minMS * (1 << uint(attempt-1))
 	if exponential > maxMS {

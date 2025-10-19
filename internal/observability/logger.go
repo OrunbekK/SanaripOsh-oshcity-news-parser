@@ -32,6 +32,10 @@ func (l *Logger) Debug(msg string, args ...any) {
 	l.logger.Debug(msg, args...)
 }
 
+func (l *Logger) Warn(msg string, args ...any) {
+	l.logger.Warn(msg, args...)
+}
+
 func parseLevel(level string) slog.Level {
 	switch level {
 	case "debug":

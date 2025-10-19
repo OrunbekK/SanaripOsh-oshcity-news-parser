@@ -1,3 +1,4 @@
+// internal/config/config.go (ПОЛНЫЙ ОБНОВЛЕННЫЙ)
 package config
 
 import (
@@ -6,15 +7,18 @@ import (
 )
 
 type Config struct {
-	BaseURLs      BaseURLsConfig      `yaml:"base_urls"`
-	HTTP          HttpConfig          `yaml:"http"`
-	RateLimit     RateLimitConfig     `yaml:"rate_limit"`
-	Pagination    PaginationConfig    `yaml:"pagination"`
-	SelectorsFile SelectorsFileConfig `yaml:"selectors_file"`
-	Normalize     NormalizeConfig     `yaml:"normalize"`
-	Storage       StorageConfig       `yaml:"storage"`
-	Scheduler     SchedulerConfig     `yaml:"scheduler"`
-	Observability ObservabilityConfig `yaml:"observability"`
+	Rod                 RodConfig           `yaml:"rod"`
+	Backoff             BackoffConfig       `yaml:"backoff"`
+	RobotsCacheTTLHours int                 `yaml:"robots_cache_ttl_hours"`
+	BaseURLs            BaseURLsConfig      `yaml:"base_urls"`
+	HTTP                HttpConfig          `yaml:"http"`
+	RateLimit           RateLimitConfig     `yaml:"rate_limit"`
+	Pagination          PaginationConfig    `yaml:"pagination"`
+	SelectorsFile       SelectorsFileConfig `yaml:"selectors_file"`
+	Normalize           NormalizeConfig     `yaml:"normalize"`
+	Storage             StorageConfig       `yaml:"storage"`
+	Scheduler           SchedulerConfig     `yaml:"scheduler"`
+	Observability       ObservabilityConfig `yaml:"observability"`
 }
 
 type BaseURLsConfig struct {
@@ -22,16 +26,30 @@ type BaseURLsConfig struct {
 	KY string `yaml:"ky"`
 }
 
+type RodConfig struct {
+	Enabled          bool   `yaml:"enabled"`
+	ChromePath       string `yaml:"chrome_path"`
+	PageTimeoutS     int    `yaml:"page_timeout_s"`
+	WaitLoadTimeoutS int    `yaml:"wait_load_timeout_s"`
+	LazyLoadDelayS   int    `yaml:"lazy_load_delay_s"`
+}
+
+type BackoffConfig struct {
+	MinMS     int `yaml:"min_ms"`
+	MaxMS     int `yaml:"max_ms"`
+	JitterPct int `yaml:"jitter_pct"`
+}
+
 type HttpConfig struct {
-	UserAgent        string `yaml:"user_agent"`
-	ConnectTimeoutMS int    `yaml:"connect_timeout_ms"`
-	TotalTimeoutMS   int    `yaml:"total_timeout_ms"`
-	MaxRetries       int    `yaml:"max_retries"`
-	BackoffMinMS     int    `yaml:"backoff_min_ms"`
-	BackoffMaxMS     int    `yaml:"backoff_max_ms"`
-	JitterPct        int    `yaml:"jitter_pct"`
-	AcceptLanguageRU string `yaml:"accept_language_ru"`
-	AcceptLanguageKY string `yaml:"accept_language_ky"`
+	UserAgent                 string `yaml:"user_agent"`
+	ConnectTimeoutMS          int    `yaml:"connect_timeout_ms"`
+	TotalTimeoutMS            int    `yaml:"total_timeout_ms"`
+	MaxRetries                int    `yaml:"max_retries"`
+	MaxIdleConnections        int    `yaml:"max_idle_connections"`
+	MaxIdleConnectionsPerHost int    `yaml:"max_idle_connections_per_host"`
+	IdleConnectionTimeoutS    int    `yaml:"idle_connection_timeout_s"`
+	AcceptLanguageRU          string `yaml:"accept_language_ru"`
+	AcceptLanguageKY          string `yaml:"accept_language_ky"`
 }
 
 type RateLimitConfig struct {
@@ -44,6 +62,7 @@ type PaginationConfig struct {
 	MaxPagesRU            int    `yaml:"max_pages_ru"`
 	MaxPagesKY            int    `yaml:"max_pages_ky"`
 	StopOnKnownChainPages int    `yaml:"stop_on_known_chain_pages"`
+	DaysBackThreshold     int    `yaml:"days_back_threshold"`
 }
 
 type SelectorsFileConfig struct {
@@ -137,6 +156,35 @@ func (c *Config) Validate() error {
 	if c.Observability.LogLevel == "" {
 		return fmt.Errorf("observability.log_level is required")
 	}
+	if c.RobotsCacheTTLHours <= 0 {
+		return fmt.Errorf("robots_cache_ttl_hours must be > 0")
+	}
+	if c.Backoff.MinMS <= 0 {
+		return fmt.Errorf("backoff.min_ms must be > 0")
+	}
+	if c.Backoff.MaxMS <= 0 {
+		return fmt.Errorf("backoff.max_ms must be > 0")
+	}
+	if c.Backoff.MinMS > c.Backoff.MaxMS {
+		return fmt.Errorf("backoff.min_ms must be <= backoff.max_ms")
+	}
+	if c.Backoff.JitterPct < 0 || c.Backoff.JitterPct > 100 {
+		return fmt.Errorf("backoff.jitter_pct must be between 0 and 100")
+	}
+	if c.Rod.Enabled {
+		if c.Rod.ChromePath == "" {
+			return fmt.Errorf("rod.chrome_path is required when rod.enabled is true")
+		}
+		if c.Rod.PageTimeoutS <= 0 {
+			return fmt.Errorf("rod.page_timeout_s must be > 0")
+		}
+		if c.Rod.WaitLoadTimeoutS <= 0 {
+			return fmt.Errorf("rod.wait_load_timeout_s must be > 0")
+		}
+		if c.Rod.LazyLoadDelayS < 0 {
+			return fmt.Errorf("rod.lazy_load_delay_s must be >= 0")
+		}
+	}
 	return nil
 }
 
@@ -149,12 +197,16 @@ func (c *Config) GetTotalTimeout() time.Duration {
 	return time.Duration(c.HTTP.TotalTimeoutMS) * time.Millisecond
 }
 
+func (c *Config) GetIdleConnectionTimeout() time.Duration {
+	return time.Duration(c.HTTP.IdleConnectionTimeoutS) * time.Second
+}
+
 func (c *Config) GetBackoffMin() time.Duration {
-	return time.Duration(c.HTTP.BackoffMinMS) * time.Millisecond
+	return time.Duration(c.Backoff.MinMS) * time.Millisecond
 }
 
 func (c *Config) GetBackoffMax() time.Duration {
-	return time.Duration(c.HTTP.BackoffMaxMS) * time.Millisecond
+	return time.Duration(c.Backoff.MaxMS) * time.Millisecond
 }
 
 func (c *Config) GetCommandTimeout() time.Duration {
@@ -163,4 +215,20 @@ func (c *Config) GetCommandTimeout() time.Duration {
 
 func (c *Config) GetSchedulerInterval() time.Duration {
 	return time.Duration(c.Scheduler.IntervalS) * time.Second
+}
+
+func (c *Config) GetRobotsCacheTTL() time.Duration {
+	return time.Duration(c.RobotsCacheTTLHours) * time.Hour
+}
+
+func (c *Config) GetRodPageTimeout() time.Duration {
+	return time.Duration(c.Rod.PageTimeoutS) * time.Second
+}
+
+func (c *Config) GetRodWaitLoadTimeout() time.Duration {
+	return time.Duration(c.Rod.WaitLoadTimeoutS) * time.Second
+}
+
+func (c *Config) GetRodLazyLoadDelay() time.Duration {
+	return time.Duration(c.Rod.LazyLoadDelayS) * time.Second
 }

@@ -104,10 +104,8 @@ func trySelectorsAttr(sel *goquery.Selection, selectors []string, attr string) s
 		value, exists := sel.Find(selector).First().Attr(attr)
 		if exists && value != "" {
 			// Если это srcset, парсим первый URL
-			fmt.Println(attr, value)
 			if attr == "srcset" {
 				urls := strings.Split(value, ",")
-				fmt.Println(value)
 				for _, urlPair := range urls {
 					parts := strings.Fields(strings.TrimSpace(urlPair))
 					if len(parts) > 0 {

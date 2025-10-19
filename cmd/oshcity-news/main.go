@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"oshcity-news-parser/internal/app"
 
 	"oshcity-news-parser/internal/config"
 	"oshcity-news-parser/internal/fetcher"
@@ -26,7 +27,15 @@ func main() {
 	logger := observability.NewLogger(cfg.Observability.LogPath, cfg.Observability.LogLevel)
 	logger.Info("Application started", "config", configPath)
 
-	// Загружаем селекторы
+	// Создаём парсер и фетчер
+	f := fetcher.NewFetcher(cfg, logger)
+	defer func() {
+		if err := f.Close(); err != nil {
+			logger.Error("Failed to close fetcher", "error", err.Error())
+		}
+	}()
+
+	// Загружаем селекторы для RU
 	selectorsRU := &scraper.Selectors{
 		ListContainer:  "div.elementor-posts-container",
 		CardSelectors:  "article.elementor-post",
@@ -38,44 +47,26 @@ func main() {
 		NextPageLink:   []string{"nav.elementor-pagination a.next@href", "a.page-numbers.next@href"},
 	}
 
-	// Создаём парсер и фетчер
-	f := fetcher.NewFetcher(cfg, logger)
+	// Создаём парсер (используем RU селекторы для примера)
 	scr := scraper.NewScraper(selectorsRU, logger)
+	dateParser := scraper.NewDateParser("ru")
 
-	logger.Info("Fetching news", "url", cfg.BaseURLs.RU, "language", "ru")
+	// Создаём оркестратор
+	orchestrator := app.NewOrchestrator(cfg, logger, f, scr, dateParser)
 
-	// Фетчим первую страницу
 	ctx := context.Background()
-	resp, err := f.Fetch(ctx, cfg.BaseURLs.RU, "ru")
+
+	// Запускаем пагинацию для RU
+	logger.Info("Starting RU pagination")
+	statsRU, err := orchestrator.Run(ctx, "ru")
 	if err != nil {
-		logger.Error("Fetch failed", "error", err.Error())
-		log.Fatalf("Fetch failed: %v", err)
-	}
-
-	logger.Info("Fetched successfully", "size", len(resp.Body))
-
-	// Парсим листинг
-	cards, err := scr.ParseListing(string(resp.Body))
-	if err != nil {
-		logger.Error("Parse failed", "error", err.Error())
-		log.Fatalf("Parse failed: %v", err)
-	}
-
-	logger.Info("Parsing completed", "cards-found", len(cards))
-
-	// Выводим первые 3 карточки
-	for i, card := range cards {
-		if i >= 3 {
-			break
-		}
-
-		logger.Info("Processing card",
-			"num", i+1,
-			"title", card.Title,
-			"url", card.URL,
-			"thumbnail_url", card.ThumbnailURL,
-			"date", card.DateRaw,
-			"text", card.Text[:min(50, len(card.Text))]+"...",
+		logger.Error("RU pagination failed", "error", err.Error())
+	} else {
+		logger.Info("RU pagination completed",
+			"total_pages", statsRU.TotalPages,
+			"total_cards", statsRU.TotalCards,
+			"old_cards", statsRU.OldCards,
+			"reason", statsRU.StoppedReason,
 		)
 	}
 

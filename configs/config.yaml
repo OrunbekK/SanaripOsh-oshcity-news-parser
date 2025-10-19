@@ -2,26 +2,41 @@ base_urls:
   ru: "https://oshcity.gov.kg/ru/novosti/"
   ky: "https://oshcity.gov.kg/ky/zha%d2%a3ylyktar/"
 
+rod:
+  enabled: true
+  chrome_path: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  page_timeout_s: 30
+  wait_load_timeout_s: 30
+  lazy_load_delay_s: 3
+
 http:
   user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
   connect_timeout_ms: 10000
   total_timeout_ms: 30000
   max_retries: 3
-  backoff_min_ms: 250
-  backoff_max_ms: 2000
-  jitter_pct: 20
+  max_idle_connections: 100
+  max_idle_connections_per_host: 10
+  idle_connection_timeout_s: 90
   accept_language_ru: "ru-RU,ru;q=0.9,en;q=0.8"
   accept_language_ky: "ky-KG,ky;q=0.9,en;q=0.8"
+
+robots_cache_ttl_hours: 12
+
+backoff:
+  min_ms: 250
+  max_ms: 2000
+  jitter_pct: 20
 
 rate_limit:
   max_concurrent_per_host: 6
   rpm: 120
 
 pagination:
-  strategy: "links"  # links или pageN
+  strategy: "links"
   max_pages_ru: 60
   max_pages_ky: 60
   stop_on_known_chain_pages: 2
+  days_back_threshold: 1
 
 selectors_file:
   ru: "selectors.ru.yaml"
@@ -34,15 +49,15 @@ normalize:
   max_preview_chars: 350
 
 storage:
-  driver: "mssql"  # mssql | postgres
+  driver: "mssql"
   dsn: "Server=localhost;Database=OshCitySanarip;User Id=sa;Password=GPRS;"
   command_timeout_ms: 15000
   batch_size: 20
   tx_per_page: true
 
 scheduler:
-  mode: "interval"  # interval | cron | oneshot
-  interval_s: 900   # 15 минут
+  mode: "interval"
+  interval_s: 900
   cron_expr: ""
 
 observability:
