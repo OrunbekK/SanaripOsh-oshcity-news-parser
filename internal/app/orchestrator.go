@@ -180,13 +180,13 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 					CheckSum:     o.checksumGen.GenerateContentHash(card.SequenceNum, cardDate.Format("2006-01-02"), card.Title, card.Text, []byte{}),
 				}
 
-				o.logger.Debug("Card field lengths",
+				/*o.logger.Debug("Card field lengths",
 					"url_len", len(articleCard.CanonicalURL),
 					"title_len", len(articleCard.Title),
 					"text_len", len(articleCard.Text),
 					"image_url_len", len(articleCard.ImageURL),
 					"checksum_len", len(articleCard.CheckSum),
-				)
+				)*/
 
 				isNew, isUpdated, err := o.repo.UpsertCard(ctx, articleCard)
 				if err != nil {

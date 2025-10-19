@@ -36,17 +36,24 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 			SequenceNum: sequenceNum,
 		}
 
-		s.logger.Debug("Processing card #%d\n", sequenceNum)
+		s.logger.Debug("Processing card", "card_num", sequenceNum)
 
 		// Title
 		card.Title = trySelectors(sel, s.selectors.TitleSelectors)
 		if card.Title == "" {
+			html, _ := sel.Html()
+			s.logger.Debug("Card skipped: no title found",
+				"html_preview", html[:min(400, len(html))],
+			)
 			return
 		}
 
 		// URL
 		urlRaw := trySelectors(sel, s.selectors.URLSelectors)
 		if urlRaw == "" {
+			s.logger.Debug("Card skipped: no url",
+				"html_preview", html[:min(400, len(html))],
+			)
 			return
 		}
 		card.URL = normalizeURL(urlRaw)
@@ -54,6 +61,9 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		// ThumbnailURL
 		thumbRaw := trySelectorsAttr(sel, s.selectors.ImageSelectors, "src")
 		if thumbRaw == "" {
+			s.logger.Debug("Card skipped: no thumb",
+				"html_preview", html[:min(400, len(html))],
+			)
 			return
 		}
 		card.ThumbnailURL = normalizeURL(thumbRaw)
@@ -61,12 +71,18 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		// Text (превью из листинга)
 		card.Text = trySelectors(sel, s.selectors.TextSelectors)
 		if card.Text == "" {
+			s.logger.Debug("Card skipped: no text",
+				"html_preview", html[:min(400, len(html))],
+			)
 			return
 		}
 
 		// Date
 		card.DateRaw = trySelectors(sel, s.selectors.DateSelectors)
 		if card.DateRaw == "" {
+			s.logger.Debug("Card skipped: no date",
+				"html_preview", html[:min(400, len(html))],
+			)
 			return
 		}
 
@@ -74,7 +90,7 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		sequenceNum++
 	})
 
-	s.logger.Debug("ParseListing: total cards parsed = %d\n", len(cards))
+	s.logger.Debug("ParseListing completed", "total_cards", len(cards))
 
 	return cards, nil
 }
