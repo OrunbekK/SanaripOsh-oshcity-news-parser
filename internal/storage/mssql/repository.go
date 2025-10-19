@@ -19,11 +19,25 @@ type Repository struct {
 	logger         *observability.Logger
 }
 
-func NewRepository(dsn string, commandTimeoutMS int, logger *observability.Logger) (*Repository, error) {
+func NewRepository(
+	dsn string,
+	commandTimeoutMS int,
+	maxOpenConnections int,
+	maxIdleConnectios int,
+	connectionMaxLifetime int,
+	connectionMaxIdleTime int,
+	logger *observability.Logger,
+) (*Repository, error) {
+
 	db, err := sql.Open("sqlserver", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+
+	db.SetMaxOpenConns(maxOpenConnections)
+	db.SetMaxIdleConns(maxIdleConnectios)
+	db.SetConnMaxLifetime(time.Duration(connectionMaxLifetime) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(connectionMaxIdleTime) * time.Second)
 
 	// Тестируем соединение
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -54,6 +54,10 @@ func main() {
 		mssqlRepo, err := mssql.NewRepository(
 			cfg.Storage.DSN,
 			cfg.Storage.CommandTimeoutMS,
+			cfg.Storage.MaxOpenConnections,
+			cfg.Storage.MaxIdleConnections,
+			cfg.Storage.ConnectionMaxLifetime,
+			cfg.Storage.ConnectionMaxIdleTime,
 			logger,
 		)
 		if err != nil {

@@ -78,11 +78,15 @@ type NormalizeConfig struct {
 }
 
 type StorageConfig struct {
-	Driver           string `yaml:"driver"`
-	DSN              string `yaml:"dsn"`
-	CommandTimeoutMS int    `yaml:"command_timeout_ms"`
-	BatchSize        int    `yaml:"batch_size"`
-	TxPerPage        bool   `yaml:"tx_per_page"`
+	Driver                string `yaml:"driver"`
+	DSN                   string `yaml:"dsn"`
+	CommandTimeoutMS      int    `yaml:"command_timeout_ms"`
+	BatchSize             int    `yaml:"batch_size"`
+	TxPerPage             bool   `yaml:"tx_per_page"`
+	MaxOpenConnections    int    `yaml:"max_open_connections"`
+	MaxIdleConnections    int    `yaml:"max_idle_connections"`
+	ConnectionMaxLifetime int    `yaml:"conn_max_lifetime_seconds"`
+	ConnectionMaxIdleTime int    `yaml:"conn_max_idle_time_seconds"`
 }
 
 type SchedulerConfig struct {

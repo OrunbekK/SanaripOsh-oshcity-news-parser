@@ -58,6 +58,10 @@ storage:
   command_timeout_ms: 15000
   batch_size: 20
   tx_per_page: true
+  max_open_connections: 100
+  max_idle_connections: 25
+  connection_max_lifetime_seconds: 3600
+  connection_max_idle_time_seconds: 900
 
 scheduler:
   mode: "interval"
