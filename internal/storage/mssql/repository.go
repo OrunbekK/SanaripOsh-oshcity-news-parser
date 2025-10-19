@@ -262,3 +262,24 @@ func (r *Repository) Close() error {
 	}
 	return nil
 }
+
+func (r *Repository) UpdateNewsCheckSum(ctx context.Context) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.commandTimeout)
+	defer cancel()
+
+	query := `EXEC USP_UpdateNewsCheckSum @result OUTPUT, @Msg OUTPUT`
+
+	var result int
+	var msg string
+
+	err := r.db.QueryRowContext(ctx, query).Scan(&result, &msg)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute UpdateNewsCheckSum: %w", err)
+	}
+
+	if result < 0 {
+		return "", fmt.Errorf("UpdateNewsCheckSum error: %s", msg)
+	}
+
+	return msg, nil
+}

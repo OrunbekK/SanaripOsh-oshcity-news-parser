@@ -30,4 +30,6 @@ type Repository interface {
 
 	// GetCardCount получает количество загруженных карточек для языка
 	GetCardCount(ctx context.Context, lang string) (int, error)
+
+	UpdateNewsCheckSum(ctx context.Context) (string, error)
 }

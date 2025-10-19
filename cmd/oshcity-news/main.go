@@ -127,5 +127,14 @@ func main() {
 		}
 	}
 
+	// Обновляем контрольные суммы новостей в БД
+	logger.Info("Updating news checksums in database")
+	msg, err := repo.UpdateNewsCheckSum(ctx)
+	if err != nil {
+		logger.Error("Failed to update news checksums", "error", err.Error())
+	} else {
+		logger.Info("News checksums updated successfully", "message", msg)
+	}
+
 	logger.Info("Application finished")
 }
