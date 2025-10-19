@@ -164,34 +164,19 @@ func (f *Fetcher) fetchOnce(ctx context.Context, urlStr string, lang string) (*F
 func (f *Fetcher) fetchWithRod(ctx context.Context, urlStr string, lang string) (*FetchResponse, error) {
 	f.logger.Info("Fetching with Rod", "url", urlStr)
 
-	page, err := f.browser.Page(proto.TargetCreateTarget{URL: urlStr})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create page: %w", err)
-	}
-	defer page.Close()
+	page := f.browser.MustPage(urlStr)
+	defer func() {
+		_ = page.Close()
+	}()
 
-	// Устанавливаем User-Agent
-	err = page.SetUserAgent(&proto.NetworkSetUserAgentOverride{
-		UserAgent: f.cfg.HTTP.UserAgent,
-	})
-	if err != nil {
-		f.logger.Error("Failed to set user agent", "error", err.Error())
-	}
+	// Ждём загрузки страницы
+	page.MustWaitLoad()
 
-	// Ждём загрузки страницы и lazy-load изображений
-	err = page.WaitLoad()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load page: %w", err)
-	}
-
-	// Небольшая задержка чтобы все lazy-load изображения загрузились
+	// Небольшая задержка для lazy-load изображений
 	time.Sleep(2 * time.Second)
 
 	// Получаем полный HTML
-	html, err := page.HTML()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get HTML: %w", err)
-	}
+	html := page.MustHTML()
 
 	f.logger.Info("Fetched with Rod successfully", "size", len(html))
 
