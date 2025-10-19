@@ -92,9 +92,15 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		// Text (превью из листинга)
 		card.Text = trySelectors(sel, s.selectors.TextSelectors)
 		if card.Text == "" {
-			s.logger.Debug("Card skipped: no text")
-			s.saveDebugCard(sequenceNum, html, card.Title, "no_text")
-			return
+			// Если нет text, используем title как текст
+			if card.Title != "" {
+				card.Text = card.Title
+			} else {
+				html, _ := sel.Html()
+				s.logger.Debug("Card skipped: no text and no title")
+				s.saveDebugCard(sequenceNum, "(no text/title)", html, "no_text_title")
+				return
+			}
 		}
 
 		// Date
