@@ -3,6 +3,7 @@ package checksum
 import (
 	"crypto/sha256"
 	"fmt"
+	"unicode/utf16"
 )
 
 type Generator struct{}
@@ -26,7 +27,18 @@ func (g *Generator) GenerateContentHash(sequenceNum int, dateISO, title, text st
 }
 
 func (g *Generator) sha256String(input string) string {
-	hash := sha256.Sum256([]byte(input))
+	// Кодируем в UTF-16 LE как в C#
+	runes := []rune(input)
+	utf16Bytes := utf16.Encode(runes)
+
+	// Конвертируем в byte array (little-endian)
+	byteArray := make([]byte, len(utf16Bytes)*2)
+	for i, r := range utf16Bytes {
+		byteArray[i*2] = byte(r)
+		byteArray[i*2+1] = byte(r >> 8)
+	}
+
+	hash := sha256.Sum256(byteArray)
 	return fmt.Sprintf("%X", hash)
 }
 

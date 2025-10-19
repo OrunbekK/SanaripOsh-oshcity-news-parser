@@ -86,9 +86,10 @@ type StorageConfig struct {
 }
 
 type SchedulerConfig struct {
-	Mode      string `yaml:"mode"`
-	IntervalS int    `yaml:"interval_s"`
-	CronExpr  string `yaml:"cron_expr"`
+	Mode                     string `yaml:"mode"`
+	IntervalS                int    `yaml:"interval_s"`
+	CronExpr                 string `yaml:"cron_expr"`
+	GracefulShutdownTimeoutS int    `yaml:"graceful_shutdown_timeout_s"`
 }
 
 type ObservabilityConfig struct {

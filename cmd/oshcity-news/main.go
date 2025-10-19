@@ -74,7 +74,8 @@ func main() {
 	checksumGen := checksum.NewGenerator()
 
 	// Настраиваем graceful shutdown с таймаутом 60 секунд
-	ctx, cancel := app.GracefulShutdown(logger, 60*time.Second)
+	shutdownTimeout := time.Duration(cfg.Scheduler.GracefulShutdownTimeoutS) * time.Second
+	ctx, cancel := app.GracefulShutdown(logger, shutdownTimeout)
 	defer cancel()
 
 	logger.Info("Starting pagination", "languages_count", len(cfg.Languages))

@@ -40,7 +40,7 @@ rate_limit:
 pagination:
   strategy: "links"
   stop_on_known_chain_pages: 10
-  days_back_threshold: 30
+  days_back_threshold: 365
 
 selectors_file:
   ru: "selectors.ru.yaml"
@@ -63,6 +63,7 @@ scheduler:
   mode: "interval"
   interval_s: 900
   cron_expr: ""
+  graceful_shutdown_timeout_s: 120
 
 observability:
   log_path: "logs/app.log"

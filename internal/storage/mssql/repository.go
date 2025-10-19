@@ -94,6 +94,14 @@ func (r *Repository) UpsertCard(ctx context.Context, card *storage.ArticleCard) 
 		sql.Named("CheckSum", card.CheckSum),
 	)
 
+	r.logger.Debug("Executing upsert with parameters",
+		"url_len", len(card.CanonicalURL),
+		"title_len", len(card.Title),
+		"text_len", len(card.Text),
+		"image_url_len", len(card.ImageURL),
+		"checksum_len", len(card.CheckSum),
+	)
+
 	if err != nil {
 		return false, false, fmt.Errorf("failed to execute upsert: %w", err)
 	}

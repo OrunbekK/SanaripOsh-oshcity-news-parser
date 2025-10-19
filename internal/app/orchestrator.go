@@ -161,8 +161,8 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 				"language", langCfg.Name,
 				"page", pageNum,
 				"card_num", i+1,
-				"title", card.Title,
 				"date", cardDate.Format("2006-01-02"),
+				"title", card.Title,
 				"url", card.URL,
 				"thumbnail_url", card.ThumbnailURL,
 			)
@@ -179,6 +179,14 @@ func (o *Orchestrator) Run(ctx context.Context, langCfg *config.LanguageConfig) 
 					SequenceNum:  card.SequenceNum,
 					CheckSum:     o.checksumGen.GenerateContentHash(card.SequenceNum, cardDate.Format("2006-01-02"), card.Title, card.Text, []byte{}),
 				}
+
+				o.logger.Debug("Card field lengths",
+					"url_len", len(articleCard.CanonicalURL),
+					"title_len", len(articleCard.Title),
+					"text_len", len(articleCard.Text),
+					"image_url_len", len(articleCard.ImageURL),
+					"checksum_len", len(articleCard.CheckSum),
+				)
 
 				isNew, isUpdated, err := o.repo.UpsertCard(ctx, articleCard)
 				if err != nil {
