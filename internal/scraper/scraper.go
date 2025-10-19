@@ -70,7 +70,7 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 				}
 
 			} else {
-				s.logger.Debug("Card skipped: no title")
+				s.logger.Debug("Card skipped: no title, no date, no text")
 				s.saveDebugCard(sequenceNum, "(no title)", html, "no_title")
 				return
 			}
