@@ -85,7 +85,7 @@ func (s *Scraper) ParseListing(html string) ([]*Card, error) {
 		if thumbRaw == "" {
 			s.logger.Debug("Card skipped: no thumb")
 			s.saveDebugCard(sequenceNum, html, card.Title, "no_thumb")
-			return
+			card.ThumbnailURL = ""
 		}
 		card.ThumbnailURL = normalizeURL(thumbRaw)
 
