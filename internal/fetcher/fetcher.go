@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 
 	"oshcity-news-parser/internal/config"
 	"oshcity-news-parser/internal/observability"
@@ -168,6 +169,19 @@ func (f *Fetcher) fetchWithRod(ctx context.Context, urlStr string, lang string) 
 	f.logger.Debug("Fetching with Rod", "url", urlStr)
 
 	page := f.browser.MustPage(urlStr)
+
+	// Устанавливаем headers как в HTTP клиенте
+	page.SetUserAgent(&proto.NetworkSetUserAgentOverride{
+		UserAgent: f.cfg.HTTP.UserAgent,
+	})
+
+	// Эмулируем браузер
+	page.MustEval(`() => {
+		Object.defineProperty(navigator, 'webdriver', {
+			get: () => false,
+		})
+	}`)
+
 	defer func() {
 		_ = page.Close()
 	}()
@@ -175,6 +189,12 @@ func (f *Fetcher) fetchWithRod(ctx context.Context, urlStr string, lang string) 
 	// Ждём загрузки с timeout
 	if err := page.Timeout(time.Duration(f.cfg.Rod.WaitLoadTimeoutS) * time.Second).WaitLoad(); err != nil {
 		return nil, fmt.Errorf("failed to wait for page load: %w", err)
+	}
+
+	// Ждём всех сетевых запросов (idle state)
+	if err := page.WaitIdle(time.Duration(f.cfg.Rod.WaitLoadTimeoutS) * time.Second); err != nil {
+		f.logger.Warn("Wait idle timeout", "url", urlStr, "error", err.Error())
+		// Не возвращаем ошибку — продолжаем с уже загруженным контентом
 	}
 
 	// Задержка для lazy-load
